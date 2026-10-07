@@ -3,644 +3,506 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BF6 RedSec - Dynamic Regional Proportion Radar</title>
+    <title>BF6 RedSec - Regional Proportion & Traffic Radar</title>
+    <!-- Chart.js CDN for telemetry curves -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --bg-color: #0f172a;
-            --card-bg: #1e293b;
+            --bg-color: #0a0d14;
+            --panel-bg: rgba(16, 22, 34, 0.85);
+            --border-color: #1e293b;
+            --accent-cyan: #00f3ff;
+            --accent-orange: #ff6b00;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
-            --accent: #38bdf8;
-            --success: #4ade80;
-            --warning: #fbbf24;
-            --danger: #f87171;
-            --border: #334155;
-            --chart-grid: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
         }
 
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-main);
-            margin: 0;
-            padding: 24px;
-            line-height: 1.5;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(0, 243, 255, 0.05) 0%, transparent 70%),
+                linear-gradient(to bottom, rgba(255, 107, 0, 0.02), transparent);
         }
 
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 24px;
-            flex-wrap: wrap;
-            gap: 16px;
+            padding: 16px 24px;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
         }
 
         .header h1 {
-            margin: 0;
-            font-size: 24px;
-            color: var(--accent);
+            font-size: 1.4rem;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--accent-cyan);
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
         }
 
-        .controls {
+        .header h1::before {
+            content: '';
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background: var(--accent-orange);
+            box-shadow: 0 0 10px var(--accent-orange);
+        }
+
+        .status-badge {
             display: flex;
-            gap: 16px;
             align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            padding: 6px 12px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
         }
 
-        .btn-group {
-            display: flex;
-            background: #000;
-            border-radius: 6px;
-            overflow: hidden;
-            border: 1px solid var(--border);
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-muted);
         }
 
-        .btn-group button {
-            background: transparent;
-            color: var(--text-muted);
-            border: none;
-            padding: 8px 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
+        .status-dot.live {
+            background: var(--accent-green);
+            box-shadow: 0 0 8px var(--accent-green);
         }
 
-        .btn-group button.active {
-            background: var(--accent);
-            color: #000;
-        }
-
-        .refresh-btn {
-            background: var(--card-bg);
-            border: 1px solid var(--border);
-            color: var(--text-main);
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-        }
-
-        .refresh-btn:hover {
-            background: var(--border);
-        }
-
-        .status-banner {
-            background: linear-gradient(90deg, rgba(56, 189, 248, 0.1) 0%, rgba(30, 41, 59, 0) 100%);
-            border-left: 4px solid var(--accent);
-            padding: 16px;
-            border-radius: 4px;
-            margin-bottom: 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-
-        .status-banner .live-count {
-            font-size: 20px;
-            font-weight: bold;
-        }
-
-        .card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 24px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-            border: 1px solid var(--border);
-            margin-bottom: 24px;
-        }
-
-        .abstract p {
-            color: var(--text-muted);
-            margin-bottom: 12px;
-        }
-        .abstract p:last-child {
-            margin-bottom: 0;
-        }
-        .abstract h2 {
-            margin-top: 0;
-            font-size: 18px;
-            color: var(--text-main);
+        .status-dot.baseline {
+            background: var(--accent-orange);
+            box-shadow: 0 0 8px var(--accent-orange);
         }
 
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 24px;
-            margin-bottom: 32px;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 20px;
         }
 
-        .region-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 16px;
+        .card {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
         }
 
-        .region-name {
-            font-size: 18px;
-            font-weight: bold;
-            margin: 0;
+        .col-3 { grid-column: span 3; }
+        .col-4 { grid-column: span 4; }
+        .col-8 { grid-column: span 8; }
+        .col-12 { grid-column: span 12; }
+
+        @media (max-width: 1024px) {
+            .col-3, .col-4, .col-8 { grid-column: span 12; }
         }
 
-        .region-time {
-            font-size: 13px;
+        .metric-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-main);
+            font-family: monospace;
+        }
+
+        .metric-sub {
+            font-size: 0.75rem;
             color: var(--text-muted);
             margin-top: 4px;
         }
 
-        .badge {
-            background: var(--border);
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        .badge.ping {
-            background: rgba(74, 222, 128, 0.1);
-            color: var(--success);
-            border: 1px solid rgba(74, 222, 128, 0.2);
-        }
-
-        .badge.ping.medium {
-            background: rgba(251, 191, 36, 0.1);
-            color: var(--warning);
-            border: 1px solid rgba(251, 191, 36, 0.2);
-        }
-
-        .badge.holiday {
-            background: var(--warning);
-            color: #000;
-        }
-
-        .badge.eve {
-            background: var(--accent);
-            color: #000;
-        }
-
-        .metrics {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            margin-bottom: 16px;
-        }
-
-        .metric-label {
-            font-size: 12px;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 4px;
-        }
-
-        .metric-value {
-            font-size: 20px;
-            font-weight: bold;
-            font-variant-numeric: tabular-nums;
-        }
-
-        .progress-bar {
-            height: 6px;
-            background: #000;
-            border-radius: 3px;
-            overflow: hidden;
-            margin-top: 8px;
+        .controls {
             display: flex;
+            gap: 10px;
+            margin-top: 15px;
         }
 
-        .progress-fill {
-            height: 100%;
-            background: var(--accent);
-            transition: width 0.5s ease-out;
+        button {
+            background: rgba(0, 243, 255, 0.1);
+            border: 1px solid var(--accent-cyan);
+            color: var(--accent-cyan);
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.2s;
         }
 
-        .progress-fill-redsec {
-            height: 100%;
-            background: #64748b; 
-            transition: width 0.5s ease-out;
+        button:hover {
+            background: var(--accent-cyan);
+            color: #000;
+            box-shadow: 0 0 12px rgba(0, 243, 255, 0.4);
+        }
+
+        .slider-container {
+            margin-top: 15px;
+        }
+
+        .slider-container label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            margin-bottom: 6px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent-cyan);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 320px;
+            width: 100%;
+        }
+
+        .holiday-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 280px;
+            overflow-y: auto;
+        }
+
+        .holiday-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .holiday-item.active {
+            border-color: var(--accent-orange);
+            background: rgba(255, 107, 0, 0.05);
+        }
+
+        .holiday-date {
+            color: var(--accent-cyan);
+            font-family: monospace;
         }
     </style>
 </head>
 <body>
 
-<div class="container">
     <div class="header">
-        <h1>📡 BF6 RedSec Regional Proportion Radar</h1>
-        <div class="controls">
-            <div class="btn-group">
-                <button id="btn-pc" class="active" onclick="setPlatformMode('pc')">💻 PC Only</button>
-                <button id="btn-cross" onclick="setPlatformMode('crossplay')">🌐 Cross-Play</button>
-            </div>
-            <button class="refresh-btn" id="force-sync-btn" onclick="fetchSteamData(true)">↻ Force Sync</button>
+        <h1>BF6 RedSec // Regional Traffic Radar</h1>
+        <div class="status-badge">
+            <div id="status-dot" class="status-dot"></div>
+            <span id="status-text">Initializing API...</span>
         </div>
     </div>
 
-    <div class="status-banner">
-        <div>
-            <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 4px;">Global Steam Baseline (AppID: 2807960)</div>
-            <div class="live-count" id="global-steam-count">Loading live data...</div>
-        </div>
-        <div style="text-align: right; display:flex; gap:16px; align-items:center;">
-            <div>
-                <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 4px;">Chart Horizon</div>
-                <div style="font-weight: bold; color: var(--accent);">Current Time (Left) → +23h Future Forecast</div>
-            </div>
-            <div>
-                <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 4px;">Data Source & Scope</div>
-                <div style="font-weight: bold;" id="status-mode">Checking...</div>
+    <div class="grid">
+        <!-- Metric 1: Steam Live Count -->
+        <div class="card col-4">
+            <div class="metric-title">Steam Concurrent Players (AppID 2807960)</div>
+            <div class="metric-value" id="steam-count">--</div>
+            <div class="metric-sub" id="sync-time">Last update: Pending</div>
+            <div class="controls">
+                <button onclick="fetchSteamData(true)">Force API Sync</button>
             </div>
         </div>
-    </div>
 
-    <div class="card abstract">
-        <h2>How This Radar Works & Dynamic Regional Proportions</h2>
-        <p>This dashboard estimates real-time <strong>Battlefield 6</strong> server populations for regions reachable from Hong Kong with under 200ms ping.</p>
-        <p><strong>Multi-Proxy Rotation Chain:</strong> Fully integrated with robust multi-proxy fallback routing (AllOrigins, ThingProxy, and CodeTabs) to guarantee seamless live telemetry synchronization with Steam AppID <code>2807960</code>.</p>
-    </div>
-
-    <div class="grid" id="region-cards">
-        <!-- Cards injected via JS -->
-    </div>
-
-    <div class="card">
-        <div class="region-header">
-            <h2 class="region-name">24-Hour Regional Share Proportions (Stacked Percentage View)</h2>
+        <!-- Metric 2: Estimated Total Concurrents -->
+        <div class="card col-4">
+            <div class="metric-title">Est. Total Active Players (Cross-Play)</div>
+            <div class="metric-value" id="total-count">--</div>
+            <div class="slider-container">
+                <label>
+                    <span>Cross-Play Multiplier (PC vs Console)</span>
+                    <span id="multiplier-val">2.8x</span>
+                </label>
+                <input type="range" id="multiplier-slider" min="1.0" max="5.0" step="0.1" value="2.8" oninput="updateCalculations()">
+            </div>
         </div>
-        <canvas id="proportionChart" height="100"></canvas>
-    </div>
 
-    <div class="card" style="margin-top: 24px;">
-        <div class="region-header">
-            <h2 class="region-name">24-Hour Future Forecast (Current Time at Left → +23h Future)</h2>
+        <!-- Metric 3: Active Regional Dominance -->
+        <div class="card col-4">
+            <div class="metric-title">Current Peak Region</div>
+            <div class="metric-value" id="peak-region" style="color: var(--accent-cyan);">--</div>
+            <div class="metric-sub" id="peak-share">Calculating regional diurnal curve...</div>
         </div>
-        <canvas id="trafficChart" height="100"></canvas>
+
+        <!-- 24-Hour Forecast Chart -->
+        <div class="card col-8">
+            <div class="metric-title">24-Hour Regional Proportion & Forecast Stack</div>
+            <div class="chart-container">
+                <canvas id="trafficChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Holiday & Surge Calendar -->
+        <div class="card col-4">
+            <div class="metric-title">Holiday & Event Surge Trackers (2026/2027)</div>
+            <ul class="holiday-list" id="holiday-list">
+                <!-- Dynamically populated -->
+            </ul>
+        </div>
     </div>
-</div>
 
-<script>
-    // 1. Regional Holiday Calendars
-    const REGIONAL_HOLIDAYS = {
-        hongkong: [
-            "2026-01-01", "2026-02-17", "2026-02-18", "2026-02-19", "2026-04-03", 
-            "2026-04-04", "2026-04-06", "2026-05-01", "2026-05-24", "2026-06-19", 
-            "2026-07-01", "2026-09-26", "2026-10-01", "2026-10-18", "2026-12-25", "2026-12-26",
-            "2027-01-01", "2027-02-06", "2027-02-08", "2027-02-09", "2027-03-26", 
-            "2027-03-27", "2027-03-29", "2027-04-05", "2027-05-01", "2027-05-13", 
-            "2027-06-09", "2027-07-01", "2027-09-16", "2027-10-01", "2027-10-08", 
-            "2027-12-25", "2027-12-27"
-        ],
-        singapore: [
-            "2026-01-01", "2026-02-17", "2026-02-18", "2026-03-21", "2026-04-03", 
-            "2026-05-01", "2026-05-27", "2026-05-31", "2026-06-01", "2026-08-09", 
-            "2026-08-10", "2026-11-08", "2026-11-09", "2026-12-25",
-            "2027-01-01", "2027-02-06", "2027-02-07", "2027-02-08", "2027-03-10", 
-            "2027-03-26", "2027-05-01", "2027-05-17", "2027-05-20", "2027-08-09", 
-            "2027-10-28", "2027-12-25"
-        ],
-        tokyo: [
-            "2026-01-01", "2026-01-12", "2026-02-11", "2026-02-23", "2026-03-20", 
-            "2026-04-29", "2026-05-03", "2026-05-04", "2026-05-05", "2026-05-06",
-            "2026-07-20", "2026-08-11", "2026-09-21", "2026-09-22", "2026-09-23", 
-            "2026-10-12", "2026-11-03", "2026-11-23", "2026-12-31",
-            "2027-01-01", "2027-01-02", "2027-01-03", "2027-01-11", "2027-02-11", 
-            "2027-02-23", "2027-03-21", "2027-03-22", "2027-04-29", "2027-05-03", 
-            "2027-05-04", "2027-05-05", "2027-07-19", "2027-08-11", "2027-09-20", 
-            "2027-09-23", "2027-10-11", "2027-11-03", "2027-11-23", "2027-12-29", 
-            "2027-12-30", "2027-12-31"
-        ],
-        sydney: [
-            "2026-01-01", "2026-01-26", "2026-04-03", "2026-04-04", "2026-04-05", 
-            "2026-04-06", "2026-04-25", "2026-04-27", "2026-06-08", "2026-10-05", 
-            "2026-12-25", "2026-12-26", "2026-12-28",
-            "2027-01-01", "2027-01-26", "2027-03-26", "2027-03-27", "2027-03-28", 
-            "2027-03-29", "2027-04-25", "2027-04-26", "2027-06-14", "2027-10-04", 
-            "2027-12-25", "2027-12-26", "2027-12-27", "2027-12-28"
-        ],
-        uswest: [
-            "2026-01-01", "2026-01-19", "2026-02-16", "2026-05-25", "2026-06-19", 
-            "2026-07-03", "2026-07-04", "2026-09-07", "2026-10-12", "2026-11-11", 
-            "2026-11-26", "2026-12-25",
-            "2027-01-01", "2027-01-18", "2027-02-15", "2027-05-31", "2027-06-18", 
-            "2027-07-05", "2027-09-06", "2027-10-11", "2027-11-11", "2027-11-25", 
-            "2027-12-24", "2027-12-31"
-        ]
-    };
+    <script>
+        const STEAM_APP_ID = '2807960';
+        const STEAM_API_URL = `https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/?appid=${STEAM_APP_ID}`;
+        const CACHE_KEY = 'bf6_steam_players';
+        const CACHE_TIME_KEY = 'bf6_steam_time';
 
-    const STEAMDB_PATTERN = {
-        0: 34171, 1: 35529, 2: 38239, 3: 39101, 4: 37293, 5: 32993, 
-        6: 28672, 7: 26599, 8: 27500, 9: 28938, 10: 29292, 11: 27536, 
-        12: 24297, 13: 21669, 14: 19524, 15: 18762, 16: 19005, 17: 19420, 
-        18: 20622, 19: 24082, 20: 29047, 21: 33211, 22: 35041, 23: 34919
-    };
+        // Multi-proxy fallback list to guarantee API reading from browser
+        const PROXIES = [
+            url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+            url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+            url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`
+        ];
 
-    const REGIONS = [
-        { id: "hongkong", name: "Hong Kong (Local)", baseShare: 0.05, ping: 2, tz: "Asia/Hong_Kong", peakHKT: 22, sigmaRise: 3, sigmaFall: 2.5, isHub: false, color: "#38bdf8", latencyPenalty: 1.0 },
-        { id: "singapore", name: "SEA (Singapore)", baseShare: 0.12, ping: 35, tz: "Asia/Singapore", peakHKT: 22, sigmaRise: 3, sigmaFall: 2.5, isHub: false, color: "#4ade80", latencyPenalty: 0.95 },
-        { id: "tokyo", name: "Japan (Tokyo)", baseShare: 0.15, ping: 55, tz: "Asia/Tokyo", peakHKT: 21, sigmaRise: 2.5, sigmaFall: 3, isHub: false, color: "#f472b6", latencyPenalty: 0.90 },
-        { id: "sydney", name: "OCE (Sydney)", baseShare: 0.08, ping: 145, tz: "Australia/Sydney", peakHKT: 19, sigmaRise: 3, sigmaFall: 2, isHub: false, color: "#fbbf24", latencyPenalty: 0.70 },
-        { id: "uswest", name: "US West (Oregon)", baseShare: 0.18, ping: 165, tz: "America/Los_Angeles", peakHKT: 12, sigmaRise: 4, sigmaFall: 3.5, isHub: true, color: "#a78bfa", latencyPenalty: 0.60 }
-    ];
+        // 2026/2027 Holiday & Surge Calendar Events
+        const HOLIDAYS = [
+            { name: "Autumn Sale 2026", start: "2026-11-24", end: "2026-12-01", multiplier: 1.35 },
+            { name: "Winter Holiday Surge 2026", start: "2026-12-20", end: "2027-01-05", multiplier: 1.60 },
+            { name: "Lunar New Year 2027", start: "2027-02-05", end: "2027-02-12", multiplier: 1.40 },
+            { name: "Spring Season Launch 2027", start: "2027-03-15", end: "2027-03-22", multiplier: 1.50 }
+        ];
 
-    const STEAM_APP_ID = "2807960"; 
-    const CACHE_KEY = `steamData_${STEAM_APP_ID}`;
-    const CACHE_TIME_KEY = `steamTime_${STEAM_APP_ID}`;
+        let globalSteamPlayers = 125000; // Baseline fallback starting number
+        let isLiveSync = false;
+        let trafficChart = null;
 
-    let globalSteamPlayers = 29500; 
-    let isCrossPlay = false;
-    let platformMultiplier = 1.0;
-    let trafficChartInstance = null;
-    let proportionChartInstance = null;
-    let isLiveSync = false; 
+        // Fetch API using proxy chain
+        async function fetchSteamData(force = false) {
+            const now = Date.now();
+            const cachedData = localStorage.getItem(CACHE_KEY);
+            const cachedTime = localStorage.getItem(CACHE_TIME_KEY);
 
-    function setPlatformMode(mode) {
-        isCrossPlay = (mode === 'crossplay');
-        platformMultiplier = isCrossPlay ? 2.8 : 1.0;
-        document.getElementById('btn-pc').classList.toggle('active', !isCrossPlay);
-        document.getElementById('btn-cross').classList.toggle('active', isCrossPlay);
-        updateDashboard();
-    }
-
-    // Proxy from CloudFlare
-async function fetchSteamData(force = false) {
-    const now = Date.now();
-    const countEl = document.getElementById('global-steam-count');
-
-    if (force) {
-        localStorage.removeItem(CACHE_KEY);
-        localStorage.removeItem(CACHE_TIME_KEY);
-        if (countEl) countEl.innerText = "Forcing Fresh Sync...";
-    } else {
-        const cachedData = localStorage.getItem(CACHE_KEY);
-        const cachedTime = localStorage.getItem(CACHE_TIME_KEY);
-        if (cachedData && cachedTime && (now - cachedTime < 300000)) {
-            globalSteamPlayers = parseInt(cachedData, 10);
-            isLiveSync = true;
-            updateDashboard();
-            return;
-        }
-    }
-
-    if (countEl) countEl.innerText = "Syncing with Steam API...";
-
-    // Your dedicated Cloudflare Worker proxy URL
-    const workerUrl = 'https://bf6-steam-proxy-worker.dermotomred.workers.dev';
-
-    try {
-        const response = await fetch(workerUrl, { cache: 'no-store' });
-        if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
-        
-        const data = await response.json();
-        
-        if (data && data.response && typeof data.response.player_count === 'number') {
-            globalSteamPlayers = data.response.player_count;
-            isLiveSync = true; 
-            
-            localStorage.setItem(CACHE_KEY, globalSteamPlayers.toString());
-            localStorage.setItem(CACHE_TIME_KEY, now.toString());
-
-            console.log("✅ Successfully fetched live data via Worker:", globalSteamPlayers);
-        } else {
-            throw new Error("Invalid payload structure");
-        }
-    } catch (err) {
-        console.warn("❌ Worker fetch failed. Falling back to pattern baseline.", err.message);
-        isLiveSync = false;
-    }
-
-    updateDashboard();
-}
-
-    function calculatePatternTraffic(hktHour, region, totalSteamPlayers, slotIndex) {
-        const now = new Date();
-        const hktDateParts = now.toLocaleDateString("en-CA", { timeZone: "Asia/Hong_Kong" });
-        const targetHktDate = new Date(`${hktDateParts}T${String(hktHour).padStart(2, '0')}:00:00+08:00`);
-
-        const localDateStr = targetHktDate.toLocaleDateString("en-CA", { timeZone: region.tz }); 
-        const tomorrowDate = new Date(targetHktDate.getTime() + 24 * 60 * 60 * 1000);
-        const nextLocalDateStr = tomorrowDate.toLocaleDateString("en-CA", { timeZone: region.tz });
-
-        const localHour = parseInt(targetHktDate.toLocaleString("en-GB", { timeZone: region.tz, hour: 'numeric', hour12: false }), 10);
-        const dayOfWeek = new Date(targetHktDate.toLocaleString("en-US", { timeZone: region.tz })).getDay();
-
-        const regionHolidays = REGIONAL_HOLIDAYS[region.id] || [];
-        const isHoliday = regionHolidays.includes(localDateStr);
-        const isHolidayEve = regionHolidays.includes(nextLocalDateStr) && (localHour >= 18);
-        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6);
-
-        let dayMultiplier = 1.0;
-        if (isHoliday || isHolidayEve) dayMultiplier = 1.25;
-        if (isWeekend) dayMultiplier = Math.max(dayMultiplier, 1.20);
-        if (dayOfWeek === 2 && !isHoliday) dayMultiplier *= 0.85;
-
-        let slotBaseline = totalSteamPlayers;
-        if (slotIndex > 0) {
-            const currentHour = parseInt(now.toLocaleString("en-GB", { timeZone: "Asia/Hong_Kong", hour: 'numeric', hour12: false }), 10);
-            const basePatternVal = STEAMDB_PATTERN[currentHour] || 29500;
-            const targetPatternVal = STEAMDB_PATTERN[hktHour] || 29500;
-            slotBaseline = totalSteamPlayers * (targetPatternVal / basePatternVal);
-        }
-
-        const effectivePeak = (isWeekend || isHoliday) ? (region.peakHKT + 1) % 24 : region.peakHKT;
-        let diff = hktHour - effectivePeak;
-        if (diff > 12) diff -= 24;
-        if (diff < -12) diff += 24;
-
-        const sigma = (diff >= 0) ? region.sigmaFall : region.sigmaRise;
-        const bellCurve = Math.exp(-Math.pow(diff, 2) / (2 * Math.pow(sigma, 2)));
-
-        let hubOverflowMultiplier = 1.0;
-        if (region.isHub && (hktHour >= 21 || hktHour <= 2)) {
-            hubOverflowMultiplier = 1.25; 
-        }
-
-        const dynamicShare = region.baseShare * (0.3 + 0.7 * bellCurve);
-        const effectivePool = slotBaseline * platformMultiplier * dynamicShare * dayMultiplier * region.latencyPenalty * hubOverflowMultiplier;
-        const totalCount = Math.round((effectivePool * 0.18) + (effectivePool * 0.82 * bellCurve));
-        const redSecCount = Math.max(1, Math.round(totalCount * 0.03));
-
-        return { count: totalCount, redSecCount, dynamicShare, isHoliday, isHolidayEve };
-    }
-
-    function updateDashboard() {
-        document.getElementById('global-steam-count').innerText = globalSteamPlayers.toLocaleString();
-        const platformText = isCrossPlay ? "Cross-Play (PC+Console)" : "PC Only";
-        
-        if (isLiveSync) {
-            document.getElementById('status-mode').innerHTML = `<span style="color:var(--success)">🟢 Live API Synced</span> • <span>${platformText}</span>`;
-        } else {
-            document.getElementById('status-mode').innerHTML = `<span style="color:var(--warning)">⚠️ Pattern Baseline (~29.5k)</span> • <span>${platformText}</span>`;
-        }
-        
-        const container = document.getElementById('region-cards');
-        container.innerHTML = '';
-        const currentHKTHour = parseInt(new Date().toLocaleString("en-GB", { timeZone: "Asia/Hong_Kong", hour: 'numeric', hour12: false }), 10);
-
-        REGIONS.forEach(region => {
-            const trafficData = calculatePatternTraffic(currentHKTHour, region, globalSteamPlayers, 0);
-            const count = trafficData.count;
-            const redSecCount = trafficData.redSecCount;
-            const peakData = calculatePatternTraffic(region.peakHKT, region, globalSteamPlayers, 0);
-            const peakPool = peakData.count;
-            
-            const fillPct = Math.min(100, Math.max(5, (count / (peakPool || 1)) * 100));
-            const redSecPct = Math.min(100, (redSecCount / count) * 100);
-            const mainGamePct = 100 - redSecPct;
-            const pingClass = region.ping > 100 ? 'medium' : '';
-            const localTimeStr = new Date().toLocaleTimeString("en-US", { timeZone: region.tz, hour: '2-digit', minute:'2-digit' });
-
-            let holidayBadgeHtml = '';
-            let statusLabel = '';
-            if (trafficData.isHoliday) {
-                holidayBadgeHtml = `<span class="badge holiday">🎊 HOLIDAY BOOST</span>`;
-                statusLabel = `<span style="color:var(--warning); font-size:12px; font-weight:600; margin-left:8px;">[Holiday Active]</span>`;
-            } else if (trafficData.isHolidayEve) {
-                holidayBadgeHtml = `<span class="badge eve">🎉 EVE SURGE</span>`;
-                statusLabel = `<span style="color:var(--accent); font-size:12px; font-weight:600; margin-left:8px;">[Holiday Eve Surge]</span>`;
+            if (!force && cachedData && cachedTime && (now - cachedTime < 300000)) {
+                globalSteamPlayers = parseInt(cachedData, 10);
+                isLiveSync = true;
+                updateUIStatus("Live API (Cached)", true);
+                updateCalculations();
+                return;
             }
 
-            container.innerHTML += `
-                <div class="card" style="margin-bottom:0;">
-                    <div class="region-header">
-                        <div>
-                            <h3 class="region-name">${region.name} ${statusLabel}</h3>
-                            <div class="region-time">Local Time: ${localTimeStr}</div>
-                        </div>
-                    </div>
-                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:16px;">
-                        <span class="badge ping ${pingClass}">${region.ping}ms Ping</span>
-                        ${holidayBadgeHtml}
-                    </div>
-                    <div class="metrics">
-                        <div class="metric">
-                            <div class="metric-label">Active Players</div>
-                            <div class="metric-value" style="color: ${region.color}">${count.toLocaleString()}</div>
-                        </div>
-                        <div class="metric">
-                            <div class="metric-label">RedSec (Est. ~3%)</div>
-                            <div class="metric-value" style="color: #94a3b8;">${redSecCount.toLocaleString()}</div>
-                        </div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">
-                        <span>Prime Capacity (${Math.round(fillPct)}% of peak)</span>
-                        <span style="color: #94a3b8;">RedSec Share: ~${redSecCount.toLocaleString()}</span>
-                    </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${fillPct * (mainGamePct / 100)}%; background: ${region.color}"></div>
-                        <div class="progress-fill-redsec" style="width: ${fillPct * (redSecPct / 100)}%;" title="Estimated RedSec Players: ${redSecCount.toLocaleString()}"></div>
-                    </div>
-                </div>
-            `;
-        });
+            updateUIStatus("Syncing via Proxy Chain...", false);
 
-        updateCharts();
-    }
+            let fetchedSuccessfully = false;
 
-    function updateCharts() {
-        const currentHKTHour = parseInt(new Date().toLocaleString("en-GB", { timeZone: "Asia/Hong_Kong", hour: 'numeric', hour12: false }), 10);
-        const hours = [];
-        const labels = [];
-        for (let i = 0; i < 24; i++) {
-            let h = (currentHKTHour + i) % 24;
-            hours.push(h);
-            labels.push(`${String(h).padStart(2, '0')}:00${i === 0 ? ' (Live)' : ''}`);
+            for (const createProxyUrl of PROXIES) {
+                try {
+                    const targetUrl = createProxyUrl(STEAM_API_URL);
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+                    const res = await fetch(targetUrl, { signal: controller.signal });
+                    clearTimeout(timeoutId);
+
+                    if (!res.ok) continue;
+
+                    const data = await res.json();
+                    if (data && data.response && typeof data.response.player_count === 'number') {
+                        globalSteamPlayers = data.response.player_count;
+                        isLiveSync = true;
+                        fetchedSuccessfully = true;
+
+                        localStorage.setItem(CACHE_KEY, globalSteamPlayers.toString());
+                        localStorage.setItem(CACHE_TIME_KEY, now.toString());
+                        
+                        updateUIStatus("Live API Connected", true);
+                        break;
+                    }
+                } catch (e) {
+                    console.warn("Proxy attempt failed:", e.message);
+                }
+            }
+
+            if (!fetchedSuccessfully) {
+                isLiveSync = false;
+                // Calculate dynamic pattern baseline based on current hour
+                const currentUtcHour = new Date().getUTCHours();
+                globalSteamPlayers = Math.round(110000 + Math.sin((currentUtcHour - 14) * Math.PI / 12) * 45000);
+                updateUIStatus("Pattern Baseline Active", false);
+            }
+
+            updateCalculations();
         }
-        
-        const trafficDatasets = REGIONS.map(region => {
-            const data = hours.map((h, index) => calculatePatternTraffic(h, region, globalSteamPlayers, index).count);
-            return { label: region.name, data, borderColor: region.color, backgroundColor: region.color + '20', borderWidth: 2, tension: 0.4, fill: true };
-        });
 
-        const proportionDatasets = REGIONS.map(region => {
-            const data = hours.map((h, index) => {
-                let totalSum = 0;
-                let regionCount = 0;
-                REGIONS.forEach(r => {
-                    const res = calculatePatternTraffic(h, r, globalSteamPlayers, index);
-                    totalSum += res.count;
-                    if (r.id === region.id) regionCount = res.count;
-                });
-                return totalSum > 0 ? Number(((regionCount / totalSum) * 100).toFixed(1)) : 0;
+        function updateUIStatus(text, isLive) {
+            document.getElementById('status-text').innerText = text;
+            const dot = document.getElementById('status-dot');
+            dot.className = 'status-dot ' + (isLive ? 'live' : 'baseline');
+            
+            const timeStr = new Date().toLocaleTimeString();
+            document.getElementById('sync-time').innerText = `Last update: ${timeStr} (${isLive ? 'Steam API' : 'Diurnal Fallback'})`;
+        }
+
+        // Diurnal regional weight models
+        function getRegionalProportions(utcHour) {
+            // Curves peaked for timezones (NA: 02:00 UTC, EU: 19:00 UTC, ASIA: 13:00 UTC, LATAM/ROW: 23:00 UTC)
+            const na = Math.max(0.1, Math.sin(((utcHour - 20) % 24) * Math.PI / 12) * 0.4 + 0.35);
+            const eu = Math.max(0.1, Math.sin(((utcHour - 13) % 24) * Math.PI / 12) * 0.45 + 0.4);
+            const asia = Math.max(0.08, Math.sin(((utcHour - 7) % 24) * Math.PI / 12) * 0.35 + 0.25);
+            const row = Math.max(0.05, Math.sin(((utcHour - 17) % 24) * Math.PI / 12) * 0.15 + 0.1);
+
+            const total = na + eu + asia + row;
+            return {
+                NA: na / total,
+                EU: eu / total,
+                ASIA: asia / total,
+                ROW: row / total
+            };
+        }
+
+        function updateCalculations() {
+            const mult = parseFloat(document.getElementById('multiplier-slider').value);
+            document.getElementById('multiplier-val').innerText = mult.toFixed(1) + 'x';
+
+            const activeSurgeMultiplier = getCurrentHolidayMultiplier();
+            const adjustedSteam = Math.round(globalSteamPlayers * activeSurgeMultiplier);
+            const totalPlayers = Math.round(adjustedSteam * mult);
+
+            document.getElementById('steam-count').innerText = adjustedSteam.toLocaleString();
+            document.getElementById('total-count').innerText = totalPlayers.toLocaleString();
+
+            const currentUtcHour = new Date().getUTCHours();
+            const currentProps = getRegionalProportions(currentUtcHour);
+
+            // Find highest region
+            let maxRegion = 'EU';
+            let maxVal = 0;
+            for (const [reg, val] of Object.entries(currentProps)) {
+                if (val > maxVal) {
+                    maxVal = val;
+                    maxRegion = reg;
+                }
+            }
+
+            document.getElementById('peak-region').innerText = maxRegion;
+            document.getElementById('peak-share').innerText = `Shares ${(maxVal * 100).toFixed(1)}% of global traffic`;
+
+            renderChart(currentUtcHour, totalPlayers);
+            renderHolidays();
+        }
+
+        function getCurrentHolidayMultiplier() {
+            const todayStr = new Date().toISOString().split('T')[0];
+            let activeMult = 1.0;
+            for (const h of HOLIDAYS) {
+                if (todayStr >= h.start && todayStr <= h.end) {
+                    activeMult *= h.multiplier;
+                }
+            }
+            return activeMult;
+        }
+
+        function renderHolidays() {
+            const container = document.getElementById('holiday-list');
+            const todayStr = new Date().toISOString().split('T')[0];
+            container.innerHTML = '';
+
+            HOLIDAYS.forEach(h => {
+                const isActive = todayStr >= h.start && todayStr <= h.end;
+                const li = document.createElement('li');
+                li.className = `holiday-item ${isActive ? 'active' : ''}`;
+                li.innerHTML = `
+                    <div>
+                        <strong>${h.name}</strong> (${(h.multiplier * 100 - 100).toFixed(0)}% Surge)
+                        <div class="holiday-date">${h.start} to ${h.end}</div>
+                    </div>
+                    <div style="color: ${isActive ? 'var(--accent-orange)' : 'var(--text-muted)'}">
+                        ${isActive ? 'ACTIVE' : 'UPCOMING'}
+                    </div>
+                `;
+                container.appendChild(li);
             });
-            return { label: region.name, data, backgroundColor: region.color, borderWidth: 0, fill: true };
-        });
+        }
 
-        if (trafficChartInstance) trafficChartInstance.destroy();
-        if (proportionChartInstance) proportionChartInstance.destroy();
-        
-        Chart.defaults.color = '#94a3b8';
-        Chart.defaults.borderColor = '#334155';
-        
-        const highlightCurrentHourPlugin = {
-            id: 'highlightCurrentHour',
-            beforeDraw: (chart) => {
-                const ctx = chart.ctx;
-                const xAxis = chart.scales.x;
-                const yAxis = chart.scales.y;
-                const xPos = xAxis.getPixelForValue(0);
-                ctx.save();
-                ctx.beginPath();
-                ctx.lineWidth = 3;
-                ctx.strokeStyle = 'rgba(56, 189, 248, 0.8)';
-                ctx.setLineDash([4, 4]);
-                ctx.moveTo(xPos, yAxis.top);
-                ctx.lineTo(xPos, yAxis.bottom);
-                ctx.stroke();
-                ctx.restore();
+        function renderChart(currentUtcHour, currentTotal) {
+            const labels = [];
+            const dataNA = [];
+            const dataEU = [];
+            const dataASIA = [];
+            const dataROW = [];
+
+            for (let i = 0; i < 24; i++) {
+                const hour = (currentUtcHour + i) % 24;
+                const hourLabel = `${hour.toString().padStart(2, '0')}:00 UTC`;
+                labels.push(hourLabel);
+
+                const props = getRegionalProportions(hour);
+                const hourTotal = currentTotal * (0.85 + 0.3 * Math.sin((hour - 14) * Math.PI / 12));
+
+                dataNA.push(Math.round(hourTotal * props.NA));
+                dataEU.push(Math.round(hourTotal * props.EU));
+                dataASIA.push(Math.round(hourTotal * props.ASIA));
+                dataROW.push(Math.round(hourTotal * props.ROW));
             }
-        };
 
-        const ctxTraffic = document.getElementById('trafficChart').getContext('2d');
-        trafficChartInstance = new Chart(ctxTraffic, {
-            type: 'line',
-            data: { labels, datasets: trafficDatasets },
-            plugins: [highlightCurrentHourPlugin],
-            options: {
-                responsive: true,
-                interaction: { mode: 'index', intersect: false },
-                plugins: {
-                    legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8 } }
+            if (trafficChart) {
+                trafficChart.destroy();
+            }
+
+            const ctx = document.getElementById('trafficChart').getContext('2d');
+            trafficChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Europe (EU)', data: dataEU, borderColor: '#00f3ff', backgroundColor: 'rgba(0, 243, 255, 0.2)', fill: true, stack: 'combined' },
+                        { label: 'North America (NA)', data: dataNA, borderColor: '#ff6b00', backgroundColor: 'rgba(255, 107, 0, 0.2)', fill: true, stack: 'combined' },
+                        { label: 'Asia-Pacific', data: dataASIA, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.2)', fill: true, stack: 'combined' },
+                        { label: 'Rest of World', data: dataROW, borderColor: '#a855f7', backgroundColor: 'rgba(168, 85, 247, 0.2)', fill: true, stack: 'combined' }
+                    ]
                 },
-                scales: {
-                    y: { beginAtZero: true, grid: { color: '#334155' } },
-                    x: { grid: { color: '#334155' } }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#f8fafc' } }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                        y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' }, stacked: true }
+                    }
                 }
-            }
+            });
+        }
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', () => {
+            fetchSteamData();
+            // Refresh API automatically every 5 minutes
+            setInterval(() => fetchSteamData(), 300000);
         });
-
-        const ctxProp = document.getElementById('proportionChart').getContext('2d');
-        proportionChartInstance = new Chart(ctxProp, {
-            type: 'line',
-            data: { labels, datasets: proportionDatasets },
-            plugins: [highlightCurrentHourPlugin],
-            options: {
-                responsive: true,
-                interaction: { mode: 'index', intersect: false },
-                plugins: {
-                    legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8 } }
-                },
-                scales: {
-                    y: { stacked: true, max: 100, beginAtZero: true, grid: { color: '#334155' }, ticks: { callback: (val) => val + '%' } },
-                    x: { stacked: true, grid: { color: '#334155' } }
-                }
-            }
-        });
-    }
-
-    fetchSteamData();
-    setInterval(() => fetchSteamData(), 300000); 
-</script>
-
+    </script>
 </body>
 </html>
+
