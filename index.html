@@ -142,25 +142,61 @@
         .controls {
             display: flex;
             gap: 10px;
-            margin-top: 15px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+
+        .manual-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .manual-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            width: 100%;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .manual-input:focus {
+            border-color: var(--accent-cyan);
         }
 
         button {
             background: rgba(0, 243, 255, 0.1);
             border: 1px solid var(--accent-cyan);
             color: var(--accent-cyan);
-            padding: 8px 16px;
+            padding: 8px 14px;
             border-radius: 4px;
             cursor: pointer;
             font-weight: 600;
-            font-size: 0.85rem;
+            font-size: 0.82rem;
             transition: all 0.2s;
+            white-space: nowrap;
         }
 
         button:hover {
             background: var(--accent-cyan);
             color: #000;
             box-shadow: 0 0 12px rgba(0, 243, 255, 0.4);
+        }
+
+        button.secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--border-color);
+            color: var(--text-muted);
+        }
+
+        button.secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: var(--text-main);
+            box-shadow: none;
         }
 
         .slider-container {
@@ -231,8 +267,15 @@
             <div class="metric-title">Steam Concurrent Players (AppID 2807960)</div>
             <div class="metric-value" id="steam-count">--</div>
             <div class="metric-sub" id="sync-time">Last update: Pending</div>
+            
             <div class="controls">
                 <button onclick="fetchSteamData(true)">Force API Sync</button>
+                <button class="secondary" onclick="openRawApi()">Open Raw API ↗</button>
+            </div>
+
+            <div class="manual-group">
+                <input type="number" id="manual-input" class="manual-input" placeholder="Manual player count...">
+                <button onclick="applyManualCount()">Set</button>
             </div>
         </div>
 
@@ -279,7 +322,7 @@
         const CACHE_KEY = 'bf6_steam_players';
         const CACHE_TIME_KEY = 'bf6_steam_time';
 
-        // Multi-proxy fallback list to guarantee API reading from browser
+        // Enhanced multi-proxy fallback chain with multiple CORS formats
         const PROXIES = [
             url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
             url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
@@ -297,6 +340,28 @@
         let globalSteamPlayers = 125000; // Baseline fallback starting number
         let isLiveSync = false;
         let trafficChart = null;
+
+        function openRawApi() {
+            window.open(STEAM_API_URL, '_blank');
+        }
+
+        function applyManualCount() {
+            const input = document.getElementById('manual-input');
+            const val = parseInt(input.value, 10);
+            if (!isNaN(val) && val >= 0) {
+                globalSteamPlayers = val;
+                isLiveSync = true;
+                const now = Date.now();
+                localStorage.setItem(CACHE_KEY, globalSteamPlayers.toString());
+                localStorage.setItem(CACHE_TIME_KEY, now.toString());
+                
+                updateUIStatus("Manual Override Active", true);
+                updateCalculations();
+                input.value = '';
+            } else {
+                alert("Please enter a valid player count number.");
+            }
+        }
 
         // Fetch API using proxy chain
         async function fetchSteamData(force = false) {
@@ -327,7 +392,13 @@
 
                     if (!res.ok) continue;
 
-                    const data = await res.json();
+                    let data = await res.json();
+                    
+                    // Handle wrapped string responses from certain proxies
+                    if (typeof data === 'string') {
+                        try { data = JSON.parse(data); } catch(e) {}
+                    }
+
                     if (data && data.response && typeof data.response.player_count === 'number') {
                         globalSteamPlayers = data.response.player_count;
                         isLiveSync = true;
@@ -361,12 +432,11 @@
             dot.className = 'status-dot ' + (isLive ? 'live' : 'baseline');
             
             const timeStr = new Date().toLocaleTimeString();
-            document.getElementById('sync-time').innerText = `Last update: ${timeStr} (${isLive ? 'Steam API' : 'Diurnal Fallback'})`;
+            document.getElementById('sync-time').innerText = `Last update: ${timeStr} (${isLive ? 'Live Source' : 'Diurnal Fallback'})`;
         }
 
         // Diurnal regional weight models
         function getRegionalProportions(utcHour) {
-            // Curves peaked for timezones (NA: 02:00 UTC, EU: 19:00 UTC, ASIA: 13:00 UTC, LATAM/ROW: 23:00 UTC)
             const na = Math.max(0.1, Math.sin(((utcHour - 20) % 24) * Math.PI / 12) * 0.4 + 0.35);
             const eu = Math.max(0.1, Math.sin(((utcHour - 13) % 24) * Math.PI / 12) * 0.45 + 0.4);
             const asia = Math.max(0.08, Math.sin(((utcHour - 7) % 24) * Math.PI / 12) * 0.35 + 0.25);
@@ -505,4 +575,3 @@
     </script>
 </body>
 </html>
-
