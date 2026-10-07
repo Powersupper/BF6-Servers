@@ -372,76 +372,55 @@
         updateDashboard();
     }
 
-    // Fully Fixed Force Sync & Multi-Proxy Rotation Chain
-    async function fetchSteamData(force = false) {
-        const now = Date.now();
-        const countEl = document.getElementById('global-steam-count');
+    // Proxy from CloudFlare
+async function fetchSteamData(force = false) {
+    const now = Date.now();
+    const countEl = document.getElementById('global-steam-count');
 
-        if (force) {
-            localStorage.removeItem(CACHE_KEY);
-            localStorage.removeItem(CACHE_TIME_KEY);
-            if (countEl) countEl.innerText = "Forcing Fresh Sync...";
-        } else {
-            const cachedData = localStorage.getItem(CACHE_KEY);
-            const cachedTime = localStorage.getItem(CACHE_TIME_KEY);
-            if (cachedData && cachedTime && (now - cachedTime < 300000)) {
-                globalSteamPlayers = parseInt(cachedData, 10);
-                isLiveSync = true;
-                updateDashboard();
-                return;
-            }
+    if (force) {
+        localStorage.removeItem(CACHE_KEY);
+        localStorage.removeItem(CACHE_TIME_KEY);
+        if (countEl) countEl.innerText = "Forcing Fresh Sync...";
+    } else {
+        const cachedData = localStorage.getItem(CACHE_KEY);
+        const cachedTime = localStorage.getItem(CACHE_TIME_KEY);
+        if (cachedData && cachedTime && (now - cachedTime < 300000)) {
+            globalSteamPlayers = parseInt(cachedData, 10);
+            isLiveSync = true;
+            updateDashboard();
+            return;
         }
-
-        if (countEl) countEl.innerText = "Syncing with Steam API...";
-
-        const targetUrl = `https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/?appid=2807960`;
-        const encodedUrl = encodeURIComponent(targetUrl);
-        
-        const proxies = [
-            { url: `https://api.allorigins.win/get?url=${encodedUrl}`, type: 'wrapped' },
-            { url: `https://thingproxy.freeboard.io/fetch/${targetUrl}`, type: 'raw' },
-            { url: `https://api.codetabs.com/v1/proxy?quest=${encodedUrl}`, type: 'raw' }
-        ];
-
-        let success = false;
-        for (let proxy of proxies) {
-            try {
-                console.log(`Attempting to fetch via proxy: ${proxy.url}`);
-                const response = await fetch(proxy.url, { cache: 'no-store' });
-                
-                if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
-                
-                let data;
-                if (proxy.type === 'wrapped') {
-                   const wrapper = await response.json();
-                   data = JSON.parse(wrapper.contents);
-                } else {
-                   data = await response.json();
-                }
-                
-                if (data && data.response && typeof data.response.player_count === 'number') {
-                    globalSteamPlayers = data.response.player_count;
-                    isLiveSync = true; 
-                    
-                    localStorage.setItem(CACHE_KEY, globalSteamPlayers.toString());
-                    localStorage.setItem(CACHE_TIME_KEY, now.toString());
-
-                    console.log("✅ Successfully fetched live data:", globalSteamPlayers);
-                    success = true;
-                    break;
-                }
-            } catch (err) {
-                console.warn(`❌ Proxy failed: ${proxy.url}`, err.message);
-            }
-        }
-
-        if (!success) {
-            console.warn("All proxies failed. Falling back to SteamDB pattern baseline.");
-            isLiveSync = false;
-        }
-
-        updateDashboard();
     }
+
+    if (countEl) countEl.innerText = "Syncing with Steam API...";
+
+    // Your dedicated Cloudflare Worker proxy URL
+    const workerUrl = 'https://bf6-steam-proxy-worker.dermotomred.workers.dev';
+
+    try {
+        const response = await fetch(workerUrl, { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
+        
+        const data = await response.json();
+        
+        if (data && data.response && typeof data.response.player_count === 'number') {
+            globalSteamPlayers = data.response.player_count;
+            isLiveSync = true; 
+            
+            localStorage.setItem(CACHE_KEY, globalSteamPlayers.toString());
+            localStorage.setItem(CACHE_TIME_KEY, now.toString());
+
+            console.log("✅ Successfully fetched live data via Worker:", globalSteamPlayers);
+        } else {
+            throw new Error("Invalid payload structure");
+        }
+    } catch (err) {
+        console.warn("❌ Worker fetch failed. Falling back to pattern baseline.", err.message);
+        isLiveSync = false;
+    }
+
+    updateDashboard();
+}
 
     function calculatePatternTraffic(hktHour, region, totalSteamPlayers, slotIndex) {
         const now = new Date();
