@@ -55,6 +55,7 @@
             display: flex;
             gap: 16px;
             align-items: center;
+            flex-wrap: wrap;
         }
 
         .btn-group {
@@ -259,6 +260,10 @@
     <div class="header">
         <h1>📡 BF6 RedSec Regional Proportion Radar</h1>
         <div class="controls">
+            <div class="btn-group" title="Select US West Mode">
+                <button id="btn-real-us" class="active" onclick="setUSMode('real')">🇺🇸 Real US West</button>
+                <button id="btn-virtual-us" onclick="setUSMode('virtual')">🌐 Virtual US (VPN/CrossPlay)</button>
+            </div>
             <div class="btn-group">
                 <button id="btn-pc" class="active" onclick="setPlatformMode('pc')">💻 PC Only</button>
                 <button id="btn-cross" onclick="setPlatformMode('crossplay')">🌐 Cross-Play</button>
@@ -314,9 +319,9 @@
 
     <div class="card abstract" style="margin-top: 24px;">
         <h2>Methodology & Regional Traffic Distribution</h2>
-        <p>This dashboard estimates real-time <strong>Battlefield 6</strong> server populations for gaming hubs accessible from Hong Kong under a 200ms ping threshold. By taking live global telemetry synchronization from Steam AppID <code>2807960</code> via a secure serverless Cloudflare proxy, the application dynamically proportions total activity across international time zones.</p>
+        <p>This dashboard estimates real-time <strong>Battlefield 6</strong> server populations for gaming hubs accessible from Hong Kong under a 200ms ping threshold. By taking live global telemetry synchronization from Steam AppID <code>2807960</code> via your secure Cloudflare proxy, the application dynamically proportions total activity across international time zones.</p>
         <p>Each region's player volume is modeled around its unique local peak evening hours, accounting for circadian rhythm curves, weekend surges, and public holidays or holiday-eve boosts. Additionally, network latency penalties gently scale back distant server populations to reflect realistic connection accessibility from the local region, while distinguishing estimated anti-cheat (RedSec) protective footprint ratios (~3%).</p>
-        <p><strong>Virtual West US (Global Pool):</strong> Incorporates a simulated cross-play and VPN-routed pool reflecting how North American servers maintain active matchmaking queues during APAC evening hours through blended international participation.</p>
+        <p><strong>US West Mode Switch:</strong> Switch between <em>Real US West</em> (strict geographic circadian clock) and <em>Virtual US West</em> (simulated cross-play and VPN routing pool maintaining active queues during APAC evening hours).</p>
     </div>
 </div>
 
@@ -375,25 +380,35 @@
         18: 20622, 19: 24082, 20: 29047, 21: 33211, 22: 35041, 23: 34919
     };
 
-    const REGIONS = [
+    const BASE_REGIONS = [
         { id: "hongkong", name: "Hong Kong (Local)", baseShare: 0.05, ping: 2, tz: "Asia/Hong_Kong", peakHKT: 22, sigmaRise: 3, sigmaFall: 2.5, isHub: false, color: "#38bdf8", latencyPenalty: 1.0 },
         { id: "singapore", name: "SEA (Singapore)", baseShare: 0.12, ping: 35, tz: "Asia/Singapore", peakHKT: 22, sigmaRise: 3, sigmaFall: 2.5, isHub: false, color: "#4ade80", latencyPenalty: 0.95 },
         { id: "tokyo", name: "Japan (Tokyo)", baseShare: 0.15, ping: 55, tz: "Asia/Tokyo", peakHKT: 21, sigmaRise: 2.5, sigmaFall: 3, isHub: false, color: "#f472b6", latencyPenalty: 0.90 },
-        { id: "sydney", name: "OCE (Sydney)", baseShare: 0.08, ping: 145, tz: "Australia/Sydney", peakHKT: 19, sigmaRise: 3, sigmaFall: 2, isHub: false, color: "#fbbf24", latencyPenalty: 0.70 },
-        { id: "uswest", name: "US West (Oregon)", baseShare: 0.18, ping: 165, tz: "America/Los_Angeles", peakHKT: 12, sigmaRise: 4, sigmaFall: 3.5, isHub: true, color: "#a78bfa", latencyPenalty: 0.60 },
-        { id: "virtualus", name: "Virtual West US (VPN/Cross-Play Pool)", baseShare: 0.16, ping: 170, tz: "America/Los_Angeles", peakHKT: 15, sigmaRise: 5, sigmaFall: 4, isHub: true, color: "#c084fc", latencyPenalty: 0.75, isVirtual: true }
+        { id: "sydney", name: "OCE (Sydney)", baseShare: 0.08, ping: 145, tz: "Australia/Sydney", peakHKT: 19, sigmaRise: 3, sigmaFall: 2, isHub: false, color: "#fbbf24", latencyPenalty: 0.70 }
     ];
 
-    const STEAM_APP_ID = "2807960"; 
-    const CACHE_KEY = `steamData_${STEAM_APP_ID}`;
-    const CACHE_TIME_KEY = `steamTime_${STEAM_APP_ID}`;
+    const REAL_US = { id: "uswest", name: "US West (Oregon)", baseShare: 0.18, ping: 165, tz: "America/Los_Angeles", peakHKT: 12, sigmaRise: 4, sigmaFall: 3.5, isHub: true, color: "#a78bfa", latencyPenalty: 0.60 };
+    const VIRTUAL_US = { id: "virtualus", name: "Virtual West US (VPN/CrossPlay)", baseShare: 0.16, ping: 170, tz: "America/Los_Angeles", peakHKT: 15, sigmaRise: 5, sigmaFall: 4, isHub: true, color: "#c084fc", latencyPenalty: 0.75, isVirtual: true };
 
-    let globalSteamPlayers = 29500; 
+    let currentUSMode = 'real'; // 'real' or 'virtual'
     let isCrossPlay = false;
     let platformMultiplier = 1.0;
+    let globalSteamPlayers = 29500;
     let trafficChartInstance = null;
     let proportionChartInstance = null;
-    let isLiveSync = false; 
+    let isLiveSync = false;
+
+    function getActiveRegions() {
+        const usRegion = (currentUSMode === 'virtual') ? VIRTUAL_US : REAL_US;
+        return [...BASE_REGIONS, usRegion];
+    }
+
+    function setUSMode(mode) {
+        currentUSMode = mode;
+        document.getElementById('btn-real-us').classList.toggle('active', mode === 'real');
+        document.getElementById('btn-virtual-us').classList.toggle('active', mode === 'virtual');
+        updateDashboard();
+    }
 
     function setPlatformMode(mode) {
         isCrossPlay = (mode === 'crossplay');
@@ -406,6 +421,9 @@
     async function fetchSteamData(force = false) {
         const now = Date.now();
         const countEl = document.getElementById('global-steam-count');
+        const STEAM_APP_ID = "2807960";
+        const CACHE_KEY = `steamData_${STEAM_APP_ID}`;
+        const CACHE_TIME_KEY = `steamTime_${STEAM_APP_ID}`;
 
         if (force) {
             localStorage.removeItem(CACHE_KEY);
@@ -424,6 +442,7 @@
 
         if (countEl) countEl.innerText = "Syncing with Steam API...";
 
+        // User's Cloudflare Worker URL
         const workerUrl = 'https://bf6-steam-proxy.dermotomred.workers.dev/';
 
         try {
@@ -461,7 +480,7 @@
         const localHour = parseInt(targetHktDate.toLocaleString("en-GB", { timeZone: region.tz, hour: 'numeric', hour12: false }), 10);
         const dayOfWeek = new Date(targetHktDate.toLocaleString("en-US", { timeZone: region.tz })).getDay();
 
-        const regionHolidays = REGIONAL_HOLIDAYS[region.id] || [];
+        const regionHolidays = REGIONAL_HOLIDAYS[region.id === 'virtualus' ? 'uswest' : region.id] || [];
         const isHoliday = regionHolidays.includes(localDateStr);
         const isHolidayEve = regionHolidays.includes(nextLocalDateStr) && (localHour >= 18);
         const isWeekend = (dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6);
@@ -488,7 +507,7 @@
         let bellCurve = Math.exp(-Math.pow(diff, 2) / (2 * Math.pow(sigma, 2)));
 
         if (region.isVirtual) {
-            bellCurve = Math.max(bellCurve, 0.35); // Elevated trough floor for global VPN/crossplay bleed
+            bellCurve = Math.max(bellCurve, 0.35); // Elevated trough floor for VPN/crossplay bleed
         }
 
         let hubOverflowMultiplier = 1.0;
@@ -507,18 +526,20 @@
     function updateDashboard() {
         document.getElementById('global-steam-count').innerText = globalSteamPlayers.toLocaleString();
         const platformText = isCrossPlay ? "Cross-Play (PC+Console)" : "PC Only";
+        const usModeText = currentUSMode === 'virtual' ? "Virtual US" : "Real US West";
         
         if (isLiveSync) {
-            document.getElementById('status-mode').innerHTML = `<span style="color:var(--success)">🟢 Live API Synced</span> • <span>${platformText}</span>`;
+            document.getElementById('status-mode').innerHTML = `<span style="color:var(--success)">🟢 Live Synced</span> • <span>${usModeText}</span> • <span>${platformText}</span>`;
         } else {
-            document.getElementById('status-mode').innerHTML = `<span style="color:var(--warning)">⚠️ Pattern Baseline (~29.5k)</span> • <span>${platformText}</span>`;
+            document.getElementById('status-mode').innerHTML = `<span style="color:var(--warning)">⚠️ Baseline (~29.5k)</span> • <span>${usModeText}</span> • <span>${platformText}</span>`;
         }
         
         const container = document.getElementById('region-cards');
         container.innerHTML = '';
         const currentHKTHour = parseInt(new Date().toLocaleString("en-GB", { timeZone: "Asia/Hong_Kong", hour: 'numeric', hour12: false }), 10);
+        const activeRegions = getActiveRegions();
 
-        REGIONS.forEach(region => {
+        activeRegions.forEach(region => {
             const trafficData = calculatePatternTraffic(currentHKTHour, region, globalSteamPlayers, 0);
             const count = trafficData.count;
             const redSecCount = trafficData.redSecCount;
@@ -588,17 +609,19 @@
             labels.push(`${String(h).padStart(2, '0')}:00${i === 0 ? ' (Live)' : ''}`);
         }
         
-        const trafficDatasets = REGIONS.map(region => {
+        const activeRegions = getActiveRegions();
+
+        const trafficDatasets = activeRegions.map(region => {
             const data = hours.map((h, index) => calculatePatternTraffic(h, region, globalSteamPlayers, index).count);
             const localHours = hours.map(h => calculatePatternTraffic(h, region, globalSteamPlayers, 0).localHourStr);
             return { label: region.name, data, localHours, borderColor: region.color, backgroundColor: region.color + '20', borderWidth: 2, tension: 0.4, fill: true };
         });
 
-        const proportionDatasets = REGIONS.map(region => {
+        const proportionDatasets = activeRegions.map(region => {
             const data = hours.map((h, index) => {
                 let totalSum = 0;
                 let regionCount = 0;
-                REGIONS.forEach(r => {
+                activeRegions.forEach(r => {
                     const res = calculatePatternTraffic(h, r, globalSteamPlayers, index);
                     totalSum += res.count;
                     if (r.id === region.id) regionCount = res.count;
