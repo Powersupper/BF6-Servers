@@ -235,6 +235,15 @@
             transition: width 0.5s ease-out;
         }
 
+        .chart-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
         .chart-scroll-wrapper {
             width: 100%;
             overflow-x: auto;
@@ -291,9 +300,18 @@
         <!-- Cards injected via JS -->
     </div>
 
+    <!-- Chart View Toggle Toolbar -->
+    <div class="chart-toolbar">
+        <h2 style="margin: 0; font-size: 18px; color: var(--text-main);">📈 Telemetry & Proportion Visualizations</h2>
+        <div class="btn-group" title="Switch Chart Scope">
+            <button id="btn-view-whole" class="active" onclick="setChartView('whole')">📊 Whole BF6 Data</button>
+            <button id="btn-view-redsec" onclick="setChartView('redsec')">🛡️ RedSec Only Data</button>
+        </div>
+    </div>
+
     <div class="card">
         <div class="region-header">
-            <h2 class="region-name">24-Hour Regional Share Proportions (Stacked Percentage View)</h2>
+            <h2 class="region-name" id="prop-chart-title">24-Hour Regional Share Proportions (Stacked Percentage View)</h2>
         </div>
         <div class="scroll-hint">💡 Tip: Drag or swipe horizontally to view all 24 hours</div>
         <div class="chart-scroll-wrapper">
@@ -305,7 +323,7 @@
 
     <div class="card" style="margin-top: 24px;">
         <div class="region-header">
-            <h2 class="region-name">24-Hour Future Forecast (Current Time at Left → +23h Future)</h2>
+            <h2 class="region-name" id="traffic-chart-title">24-Hour Future Forecast (Current Time at Left → +23h Future)</h2>
         </div>
         <div class="scroll-hint">💡 Tip: Drag or swipe horizontally to view all 24 hours</div>
         <div class="chart-scroll-wrapper">
@@ -318,8 +336,8 @@
     <div class="card abstract" style="margin-top: 24px;">
         <h2>Methodology & Regional Traffic Distribution</h2>
         <p>This dashboard estimates real-time <strong>Battlefield 6</strong> server populations for gaming hubs accessible from Hong Kong under a 200ms ping threshold. By taking live global telemetry synchronization from Steam AppID <code>2807960</code> via your secure Cloudflare proxy, the application dynamically proportions total activity across international time zones.</p>
-        <p>Each region's player volume is modeled around its unique local peak evening hours, accounting for circadian rhythm curves, weekend surges, and public holidays or holiday-eve boosts. Additionally, network latency penalties gently scale back distant server populations to reflect realistic connection accessibility from the local region, while distinguishing estimated anti-cheat (RedSec) protective footprint ratios (~3%).</p>
-        <p><strong>US West Mode Switch:</strong> Use the toggle button directly inside the US West card above to switch between <em>Real US West</em> (strict geographic circadian clock) and <em>Virtual US West</em> (simulated cross-play and VPN routing pool maintaining active queues during APAC evening hours).</p>
+        <p>Each region's player volume is modeled around its unique local peak evening hours, accounting for circadian rhythm curves, weekend surges, and public holidays or holiday-eve boosts. Additionally, network latency penalties gently scale back distant server populations to reflect realistic connection accessibility from the local region, while distinguishing estimated anti-cheat (RedSec) protective footprint ratios.</p>
+        <p><strong>RedSec Conversion Adjustments:</strong> Accounts for higher North American console and F2P market penetration (~5.5% conversion rate for US/Virtual West US) compared to APAC/OCE hubs (~3.0% to 3.5%). Use the chart toggle above to instantly isolate Free-to-Play RedSec curves from Whole BF6 baseline data.</p>
     </div>
 </div>
 
@@ -379,16 +397,17 @@
     };
 
     const BASE_REGIONS = [
-        { id: "hongkong", name: "Hong Kong (Local)", baseShare: 0.05, ping: 2, tz: "Asia/Hong_Kong", peakHKT: 22, sigmaRise: 3, sigmaFall: 2.5, isHub: false, color: "#38bdf8", latencyPenalty: 1.0 },
-        { id: "singapore", name: "SEA (Singapore)", baseShare: 0.12, ping: 35, tz: "Asia/Singapore", peakHKT: 22, sigmaRise: 3, sigmaFall: 2.5, isHub: false, color: "#4ade80", latencyPenalty: 0.95 },
-        { id: "tokyo", name: "Japan (Tokyo)", baseShare: 0.15, ping: 55, tz: "Asia/Tokyo", peakHKT: 21, sigmaRise: 2.5, sigmaFall: 3, isHub: false, color: "#f472b6", latencyPenalty: 0.90 },
-        { id: "sydney", name: "OCE (Sydney)", baseShare: 0.08, ping: 145, tz: "Australia/Sydney", peakHKT: 19, sigmaRise: 3, sigmaFall: 2, isHub: false, color: "#fbbf24", latencyPenalty: 0.70 }
+        { id: "hongkong", name: "Hong Kong (Local)", baseShare: 0.05, ping: 2, tz: "Asia/Hong_Kong", peakHKT: 22, sigmaRise: 3, sigmaFall: 2.5, isHub: false, color: "#38bdf8", latencyPenalty: 1.0, redsecRate: 0.030 },
+        { id: "singapore", name: "SEA (Singapore)", baseShare: 0.12, ping: 35, tz: "Asia/Singapore", peakHKT: 22, sigmaRise: 3, sigmaFall: 2.5, isHub: false, color: "#4ade80", latencyPenalty: 0.95, redsecRate: 0.035 },
+        { id: "tokyo", name: "Japan (Tokyo)", baseShare: 0.15, ping: 55, tz: "Asia/Tokyo", peakHKT: 21, sigmaRise: 2.5, sigmaFall: 3, isHub: false, color: "#f472b6", latencyPenalty: 0.90, redsecRate: 0.035 },
+        { id: "sydney", name: "OCE (Sydney)", baseShare: 0.08, ping: 145, tz: "Australia/Sydney", peakHKT: 19, sigmaRise: 3, sigmaFall: 2, isHub: false, color: "#fbbf24", latencyPenalty: 0.70, redsecRate: 0.030 }
     ];
 
-    const REAL_US = { id: "uswest", name: "US West (Oregon)", baseShare: 0.18, ping: 165, tz: "America/Los_Angeles", peakHKT: 12, sigmaRise: 4, sigmaFall: 3.5, isHub: true, color: "#a78bfa", latencyPenalty: 0.60 };
-    const VIRTUAL_US = { id: "virtualus", name: "Virtual West US", baseShare: 0.16, ping: 170, tz: "America/Los_Angeles", peakHKT: 15, sigmaRise: 5, sigmaFall: 4, isHub: true, color: "#c084fc", latencyPenalty: 0.75, isVirtual: true };
+    const REAL_US = { id: "uswest", name: "US West (Oregon)", baseShare: 0.18, ping: 165, tz: "America/Los_Angeles", peakHKT: 12, sigmaRise: 4, sigmaFall: 3.5, isHub: true, color: "#a78bfa", latencyPenalty: 0.60, redsecRate: 0.055 };
+    const VIRTUAL_US = { id: "virtualus", name: "Virtual West US", baseShare: 0.16, ping: 170, tz: "America/Los_Angeles", peakHKT: 15, sigmaRise: 5, sigmaFall: 4, isHub: true, color: "#c084fc", latencyPenalty: 0.75, isVirtual: true, redsecRate: 0.055 };
 
     let currentUSMode = 'real'; // 'real' or 'virtual'
+    let currentChartView = 'whole'; // 'whole' or 'redsec'
     let isCrossPlay = false;
     let platformMultiplier = 1.0;
     let globalSteamPlayers = 29500;
@@ -404,6 +423,25 @@
     function setUSMode(mode) {
         currentUSMode = mode;
         updateDashboard();
+    }
+
+    function setChartView(view) {
+        currentChartView = view;
+        document.getElementById('btn-view-whole').classList.toggle('active', view === 'whole');
+        document.getElementById('btn-view-redsec').classList.toggle('active', view === 'redsec');
+
+        const propTitle = document.getElementById('prop-chart-title');
+        const trafficTitle = document.getElementById('traffic-chart-title');
+
+        if (view === 'redsec') {
+            propTitle.innerText = "24-Hour RedSec Only Share Proportions (Stacked Percentage View)";
+            trafficTitle.innerText = "24-Hour RedSec Only Forecast (Current Time at Left → +23h Future)";
+        } else {
+            propTitle.innerText = "24-Hour Regional Share Proportions (Stacked Percentage View)";
+            trafficTitle.innerText = "24-Hour Future Forecast (Current Time at Left → +23h Future)";
+        }
+
+        updateCharts();
     }
 
     function setPlatformMode(mode) {
@@ -513,7 +551,7 @@
         const dynamicShare = region.baseShare * (0.3 + 0.7 * bellCurve);
         const effectivePool = slotBaseline * platformMultiplier * dynamicShare * dayMultiplier * region.latencyPenalty * hubOverflowMultiplier;
         const totalCount = Math.round((effectivePool * 0.18) + (effectivePool * 0.82 * bellCurve));
-        const redSecCount = Math.max(1, Math.round(totalCount * 0.03));
+        const redSecCount = Math.max(1, Math.round(totalCount * region.redsecRate));
 
         return { count: totalCount, redSecCount, dynamicShare, isHoliday, isHolidayEve, localHourStr: `${String(localHour).padStart(2, '0')}:00` };
     }
@@ -557,7 +595,6 @@
                 statusLabel = `<span style="color:var(--accent); font-size:12px; font-weight:600; margin-left:8px;">[Holiday Eve Surge]</span>`;
             }
 
-            // If this is the US card, embed the toggle switch directly inside the card header!
             let cardHeaderExtra = '';
             if (region.id === 'uswest' || region.id === 'virtualus') {
                 const isVirt = (currentUSMode === 'virtual');
@@ -568,6 +605,8 @@
                     </div>
                 `;
             }
+
+            const redSecPercentLabel = (region.redsecRate * 100).toFixed(1);
 
             container.innerHTML += `
                 <div class="card" style="margin-bottom:0;">
@@ -588,7 +627,7 @@
                             <div class="metric-value" style="color: ${region.color}">${count.toLocaleString()}</div>
                         </div>
                         <div class="metric">
-                            <div class="metric-label">RedSec (Est. ~3%)</div>
+                            <div class="metric-label">RedSec (~${redSecPercentLabel}%)</div>
                             <div class="metric-value" style="color: #94a3b8;">${redSecCount.toLocaleString()}</div>
                         </div>
                     </div>
@@ -620,7 +659,10 @@
         const activeRegions = getActiveRegions();
 
         const trafficDatasets = activeRegions.map(region => {
-            const data = hours.map((h, index) => calculatePatternTraffic(h, region, globalSteamPlayers, index).count);
+            const data = hours.map((h, index) => {
+                const res = calculatePatternTraffic(h, region, globalSteamPlayers, index);
+                return currentChartView === 'redsec' ? res.redSecCount : res.count;
+            });
             const localHours = hours.map(h => calculatePatternTraffic(h, region, globalSteamPlayers, 0).localHourStr);
             return { label: region.name, data, localHours, borderColor: region.color, backgroundColor: region.color + '20', borderWidth: 2, tension: 0.4, fill: true };
         });
@@ -628,13 +670,14 @@
         const proportionDatasets = activeRegions.map(region => {
             const data = hours.map((h, index) => {
                 let totalSum = 0;
-                let regionCount = 0;
+                let regionVal = 0;
                 activeRegions.forEach(r => {
                     const res = calculatePatternTraffic(h, r, globalSteamPlayers, index);
-                    totalSum += res.count;
-                    if (r.id === region.id) regionCount = res.count;
+                    const val = currentChartView === 'redsec' ? res.redSecCount : res.count;
+                    totalSum += val;
+                    if (r.id === region.id) regionVal = val;
                 });
-                return totalSum > 0 ? Number(((regionCount / totalSum) * 100).toFixed(1)) : 0;
+                return totalSum > 0 ? Number(((regionVal / totalSum) * 100).toFixed(1)) : 0;
             });
             const localHours = hours.map(h => calculatePatternTraffic(h, region, globalSteamPlayers, 0).localHourStr);
             return { label: region.name, data, localHours, backgroundColor: region.color, borderWidth: 0, fill: true };
