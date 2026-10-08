@@ -1,9 +1,10 @@
+<!-- BUILD VERSION: v1.2.1 | Last Updated: 2026-10-08 | Fixes HKT-to-UTC Proportion Index Mapping & US West Cross-Play Floor -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BF6 RedSec - Dynamic Regional Proportion Radar</title>
+    <title>BF6 RedSec - Dynamic Regional Proportion Radar (v1.2.1)</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -31,6 +32,19 @@
         .container {
             max-width: 1200px;
             margin: 0 auto;
+        }
+
+        .version-tag {
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-family: monospace;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 12px;
         }
 
         .header {
@@ -268,6 +282,7 @@
 <body>
 
 <div class="container">
+    <div class="version-tag">📦 BUILD: v1.2.1 (Production Release)</div>
     <div class="header">
         <h1>📡 BF6 RedSec Regional Proportion Radar</h1>
         <div class="controls">
@@ -333,9 +348,9 @@
     </div>
 
     <div class="card abstract" style="margin-top: 24px;">
-        <h2>Methodology & Regional Traffic Distribution</h2>
-        <p>This dashboard estimates real-time <strong>Battlefield 6</strong> server populations using empirical hourly proportion weights derived from historical telemetry datasets, calibrated with a robust US West cross-play baseline floor to reflect active cross-regional matchmaking queues during APAC evening hours.</p>
-        <p>The regional hierarchy combines data across 6 primary vectors: <strong>Hong Kong (Local)</strong>, <strong>SEA (Singapore)</strong>, <strong>Japan (Tokyo)</strong>, <strong>OCE (Sydney)</strong>, <strong>US West (Real / Virtual)</strong>, and <strong>Other Regions (EU / East US / Others)</strong>. RedSec conversion rates are tailored to reflect regional market profiles (~5.5% for North America vs. ~3.0%–3.5% for APAC/OCE hubs).</p>
+        <h2>Methodology & Regional Traffic Distribution (v1.2.1)</h2>
+        <p>This dashboard estimates real-time <strong>Battlefield 6</strong> server populations using empirical hourly proportion weights derived from historical telemetry datasets. Time zones are correctly aligned so that local APAC evening primetime (19:00–22:00 HKT) maps accurately to UTC telemetry peaks.</p>
+        <p>The regional hierarchy combines data across 6 primary vectors: <strong>Hong Kong (Local)</strong>, <strong>SEA (Singapore)</strong>, <strong>Japan (Tokyo)</strong>, <strong>OCE (Sydney)</strong>, <strong>US West (Real / Virtual)</strong> with an active cross-play queue baseline floor, and <strong>Other Regions (EU / East US / Others)</strong>.</p>
     </div>
 </div>
 
@@ -391,7 +406,7 @@
         ]
     };
 
-    // CSV-derived hourly proportions with a realistic US West cross-play baseline floor during APAC primetime
+    // CSV-derived hourly proportions (indexed by UTC hour 0 to 23) with US West baseline floor
     const CSV_PROPORTIONS = {
         0: { hk: 0.03165, sg: 0.02814, jp: 0.05276, au: 0.02462, us: 0.22815, other: 0.63468 },
         1: { hk: 0.03173, sg: 0.02820, jp: 0.05288, au: 0.02468, us: 0.26118, other: 0.60133 },
@@ -401,13 +416,13 @@
         5: { hk: 0.04552, sg: 0.04046, jp: 0.12278, au: 0.10802, us: 0.33717, other: 0.34605 },
         6: { hk: 0.06849, sg: 0.06088, jp: 0.21622, au: 0.14393, us: 0.25895, other: 0.25153 },
         7: { hk: 0.11064, sg: 0.09835, jp: 0.26314, au: 0.15311, us: 0.15999, other: 0.21477 },
-        8: { hk: 0.14272, sg: 0.12686, jp: 0.29645, au: 0.15799, us: 0.12000, other: 0.25598 }, // Smoothed floor
-        9: { hk: 0.16453, sg: 0.14625, jp: 0.31319, au: 0.15600, us: 0.12000, other: 0.20003 }, // Smoothed floor
-        10: { hk: 0.17025, sg: 0.15133, jp: 0.30132, au: 0.13459, us: 0.12500, other: 0.21751 }, // Smoothed floor
-        11: { hk: 0.15338, sg: 0.13634, jp: 0.25302, au: 0.09341, us: 0.13000, other: 0.23385 }, // Smoothed floor
-        12: { hk: 0.11978, sg: 0.10647, jp: 0.18197, au: 0.05835, us: 0.14000, other: 0.39343 }, // Smoothed floor
-        13: { hk: 0.08630, sg: 0.07671, jp: 0.12218, au: 0.04024, us: 0.15000, other: 0.52457 }, // Smoothed floor
-        14: { hk: 0.06318, sg: 0.05616, jp: 0.08552, au: 0.03061, us: 0.16000, other: 0.60453 }, // Smoothed floor
+        8: { hk: 0.14272, sg: 0.12686, jp: 0.29645, au: 0.15799, us: 0.12000, other: 0.25598 },
+        9: { hk: 0.16453, sg: 0.14625, jp: 0.31319, au: 0.15600, us: 0.12000, other: 0.20003 },
+        10: { hk: 0.17025, sg: 0.15133, jp: 0.30132, au: 0.13459, us: 0.12500, other: 0.21751 },
+        11: { hk: 0.15338, sg: 0.13634, jp: 0.25302, au: 0.09341, us: 0.13000, other: 0.23385 },
+        12: { hk: 0.11978, sg: 0.10647, jp: 0.18197, au: 0.05835, us: 0.14000, other: 0.39343 },
+        13: { hk: 0.08630, sg: 0.07671, jp: 0.12218, au: 0.04024, us: 0.15000, other: 0.52457 },
+        14: { hk: 0.06318, sg: 0.05616, jp: 0.08552, au: 0.03061, us: 0.16000, other: 0.60453 },
         15: { hk: 0.04870, sg: 0.04329, jp: 0.06527, au: 0.02636, us: 0.17498, other: 0.64140 },
         16: { hk: 0.03975, sg: 0.03534, jp: 0.05717, au: 0.02476, us: 0.20038, other: 0.64260 },
         17: { hk: 0.03478, sg: 0.03091, jp: 0.05374, au: 0.02422, us: 0.21980, other: 0.63655 },
@@ -437,8 +452,8 @@
     const VIRTUAL_US = { id: "virtualus", name: "Virtual West US", csvKey: "us", ping: 170, tz: "America/Los_Angeles", color: "#c084fc", latencyPenalty: 0.75, isVirtual: true, redsecRate: 0.055 };
     const OTHER_REGIONS = { id: "other", name: "Other Regions (EU/East US)", csvKey: "other", ping: 210, tz: "Europe/London", color: "#94a3b8", latencyPenalty: 0.50, redsecRate: 0.040 };
 
-    let currentUSMode = 'real'; // 'real' or 'virtual'
-    let currentChartView = 'whole'; // 'whole' or 'redsec'
+    let currentUSMode = 'real';
+    let currentChartView = 'whole';
     let isCrossPlay = false;
     let platformMultiplier = 1.0;
     let globalSteamPlayers = 29500;
@@ -563,11 +578,13 @@
             slotBaseline = totalSteamPlayers * (targetPatternVal / basePatternVal);
         }
 
-        const hourlyProportions = CSV_PROPORTIONS[hktHour] || CSV_PROPORTIONS[0];
+        // Correctly map HKT hour to UTC telemetry index (UTC = HKT - 8 hours)
+        const utcIndex = (hktHour - 8 + 24) % 24;
+        const hourlyProportions = CSV_PROPORTIONS[utcIndex] || CSV_PROPORTIONS[0];
         let csvShare = hourlyProportions[region.csvKey] || 0.1;
 
         if (region.isVirtual && region.csvKey === 'us') {
-            csvShare = Math.max(csvShare, 0.25); // Enhanced Virtual US cross-play pool during APAC evening
+            csvShare = Math.max(csvShare, 0.25);
         }
 
         const effectivePool = slotBaseline * platformMultiplier * csvShare * dayMultiplier * region.latencyPenalty;
@@ -597,7 +614,7 @@
             const trafficData = calculatePatternTraffic(currentHKTHour, region, globalSteamPlayers, 0);
             const count = trafficData.count;
             const redSecCount = trafficData.redSecCount;
-            const peakData = calculatePatternTraffic(12, region, globalSteamPlayers, 0);
+            const peakData = calculatePatternTraffic(19, region, globalSteamPlayers, 0); // Reference APAC peak HKT 19:00
             const peakPool = peakData.count || 1000;
             
             const fillPct = Math.min(100, Math.max(5, (count / peakPool) * 100));
