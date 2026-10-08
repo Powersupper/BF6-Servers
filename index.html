@@ -300,7 +300,6 @@
         <!-- Cards injected via JS -->
     </div>
 
-    <!-- Chart View Toggle Toolbar -->
     <div class="chart-toolbar">
         <h2 style="margin: 0; font-size: 18px; color: var(--text-main);">📈 Telemetry & Proportion Visualizations</h2>
         <div class="btn-group" title="Switch Chart Scope">
@@ -335,9 +334,8 @@
 
     <div class="card abstract" style="margin-top: 24px;">
         <h2>Methodology & Regional Traffic Distribution</h2>
-        <p>This dashboard estimates real-time <strong>Battlefield 6</strong> server populations for gaming hubs accessible from Hong Kong under a 200ms ping threshold. By taking live global telemetry synchronization from Steam AppID <code>2807960</code> via your secure Cloudflare proxy, the application dynamically proportions total activity across international time zones.</p>
-        <p>Each region's player volume is modeled around its unique local peak evening hours, accounting for circadian rhythm curves, weekend surges, and public holidays or holiday-eve boosts. Additionally, network latency penalties gently scale back distant server populations to reflect realistic connection accessibility from the local region, while distinguishing estimated anti-cheat (RedSec) protective footprint ratios.</p>
-        <p><strong>RedSec Conversion Adjustments:</strong> Accounts for higher North American console and F2P market penetration (~5.5% conversion rate for US/Virtual West US) compared to APAC/OCE hubs (~3.0% to 3.5%). Use the chart toggle above to instantly isolate Free-to-Play RedSec curves from Whole BF6 baseline data.</p>
+        <p>This dashboard estimates real-time <strong>Battlefield 6</strong> server populations using empirical hourly proportion weights derived from historical telemetry datasets. By taking live global telemetry synchronization from Steam AppID <code>2807960</code> via your secure Cloudflare proxy, the application dynamically proportions total activity across international time zones.</p>
+        <p>The regional hierarchy combines data across 6 primary vectors: <strong>Hong Kong (Local)</strong>, <strong>SEA (Singapore)</strong>, <strong>Japan (Tokyo)</strong>, <strong>OCE (Sydney)</strong>, <strong>US West (Real / Virtual)</strong>, and <strong>Other Regions (EU / East US / Others)</strong>. RedSec conversion rates are tailored to reflect regional market profiles (~5.5% for North America vs. ~3.0%–3.5% for APAC/OCE hubs).</p>
     </div>
 </div>
 
@@ -386,7 +384,39 @@
             "2027-01-01", "2027-01-18", "2027-02-15", "2027-05-31", "2027-06-18", 
             "2027-07-05", "2027-09-06", "2027-10-11", "2027-11-11", "2027-11-25", 
             "2027-12-24", "2027-12-31"
+        ],
+        other: [
+            "2026-01-01", "2026-01-19", "2026-02-16", "2026-04-03", "2026-05-25", 
+            "2026-07-04", "2026-12-25"
         ]
+    };
+
+    // CSV-derived hourly proportions (UTC-aligned converted to HKT index lookup)
+    const CSV_PROPORTIONS = {
+        0: { hk: 0.03165, sg: 0.02814, jp: 0.05276, au: 0.02462, us: 0.22815, other: 0.63468 },
+        1: { hk: 0.03173, sg: 0.02820, jp: 0.05288, au: 0.02468, us: 0.26118, other: 0.60133 },
+        2: { hk: 0.03326, sg: 0.02956, jp: 0.05543, au: 0.02587, us: 0.29205, other: 0.56383 },
+        3: { hk: 0.03656, sg: 0.03250, jp: 0.06093, au: 0.02844, us: 0.32250, other: 0.51907 },
+        4: { hk: 0.04157, sg: 0.03695, jp: 0.06929, au: 0.05273, us: 0.34707, other: 0.45239 },
+        5: { hk: 0.04552, sg: 0.04046, jp: 0.12278, au: 0.10802, us: 0.33717, other: 0.34605 },
+        6: { hk: 0.06849, sg: 0.06088, jp: 0.21622, au: 0.14393, us: 0.25895, other: 0.25153 },
+        7: { hk: 0.11064, sg: 0.09835, jp: 0.26314, au: 0.15311, us: 0.15999, other: 0.21477 },
+        8: { hk: 0.14272, sg: 0.12686, jp: 0.29645, au: 0.15799, us: 0.08205, other: 0.19393 },
+        9: { hk: 0.16453, sg: 0.14625, jp: 0.31319, au: 0.15600, us: 0.04062, other: 0.17941 },
+        10: { hk: 0.17025, sg: 0.15133, jp: 0.30132, au: 0.13459, us: 0.03541, other: 0.20710 },
+        11: { hk: 0.15338, sg: 0.13634, jp: 0.25302, au: 0.09341, us: 0.04588, other: 0.31797 },
+        12: { hk: 0.11978, sg: 0.10647, jp: 0.18197, au: 0.05835, us: 0.07185, other: 0.46158 },
+        13: { hk: 0.08630, sg: 0.07671, jp: 0.12218, au: 0.04024, us: 0.10515, other: 0.56942 },
+        14: { hk: 0.06318, sg: 0.05616, jp: 0.08552, au: 0.03061, us: 0.14175, other: 0.62278 },
+        15: { hk: 0.04870, sg: 0.04329, jp: 0.06527, au: 0.02636, us: 0.17498, other: 0.64140 },
+        16: { hk: 0.03975, sg: 0.03534, jp: 0.05717, au: 0.02476, us: 0.20038, other: 0.64260 },
+        17: { hk: 0.03478, sg: 0.03091, jp: 0.05374, au: 0.02422, us: 0.21980, other: 0.63655 },
+        18: { hk: 0.03254, sg: 0.02892, jp: 0.05300, au: 0.02420, us: 0.23351, other: 0.62783 },
+        19: { hk: 0.03189, sg: 0.02834, jp: 0.05273, au: 0.02447, us: 0.23963, other: 0.62294 },
+        20: { hk: 0.03176, sg: 0.02823, jp: 0.05269, au: 0.02462, us: 0.23966, other: 0.62304 },
+        21: { hk: 0.03169, sg: 0.02817, jp: 0.05270, au: 0.02464, us: 0.23725, other: 0.62555 },
+        22: { hk: 0.03166, sg: 0.02814, jp: 0.05273, au: 0.02463, us: 0.23467, other: 0.62817 },
+        23: { hk: 0.03165, sg: 0.02814, jp: 0.05275, au: 0.02462, us: 0.23075, other: 0.63209 }
     };
 
     const STEAMDB_PATTERN = {
@@ -397,14 +427,15 @@
     };
 
     const BASE_REGIONS = [
-        { id: "hongkong", name: "Hong Kong (Local)", baseShare: 0.05, ping: 2, tz: "Asia/Hong_Kong", peakHKT: 22, sigmaRise: 3, sigmaFall: 2.5, isHub: false, color: "#38bdf8", latencyPenalty: 1.0, redsecRate: 0.030 },
-        { id: "singapore", name: "SEA (Singapore)", baseShare: 0.12, ping: 35, tz: "Asia/Singapore", peakHKT: 22, sigmaRise: 3, sigmaFall: 2.5, isHub: false, color: "#4ade80", latencyPenalty: 0.95, redsecRate: 0.035 },
-        { id: "tokyo", name: "Japan (Tokyo)", baseShare: 0.15, ping: 55, tz: "Asia/Tokyo", peakHKT: 21, sigmaRise: 2.5, sigmaFall: 3, isHub: false, color: "#f472b6", latencyPenalty: 0.90, redsecRate: 0.035 },
-        { id: "sydney", name: "OCE (Sydney)", baseShare: 0.08, ping: 145, tz: "Australia/Sydney", peakHKT: 19, sigmaRise: 3, sigmaFall: 2, isHub: false, color: "#fbbf24", latencyPenalty: 0.70, redsecRate: 0.030 }
+        { id: "hongkong", name: "Hong Kong (Local)", csvKey: "hk", ping: 2, tz: "Asia/Hong_Kong", color: "#38bdf8", latencyPenalty: 1.0, redsecRate: 0.030 },
+        { id: "singapore", name: "SEA (Singapore)", csvKey: "sg", ping: 35, tz: "Asia/Singapore", color: "#4ade80", latencyPenalty: 0.95, redsecRate: 0.035 },
+        { id: "tokyo", name: "Japan (Tokyo)", csvKey: "jp", ping: 55, tz: "Asia/Tokyo", color: "#f472b6", latencyPenalty: 0.90, redsecRate: 0.035 },
+        { id: "sydney", name: "OCE (Sydney)", csvKey: "au", ping: 145, tz: "Australia/Sydney", color: "#fbbf24", latencyPenalty: 0.70, redsecRate: 0.030 }
     ];
 
-    const REAL_US = { id: "uswest", name: "US West (Oregon)", baseShare: 0.18, ping: 165, tz: "America/Los_Angeles", peakHKT: 12, sigmaRise: 4, sigmaFall: 3.5, isHub: true, color: "#a78bfa", latencyPenalty: 0.60, redsecRate: 0.055 };
-    const VIRTUAL_US = { id: "virtualus", name: "Virtual West US", baseShare: 0.16, ping: 170, tz: "America/Los_Angeles", peakHKT: 15, sigmaRise: 5, sigmaFall: 4, isHub: true, color: "#c084fc", latencyPenalty: 0.75, isVirtual: true, redsecRate: 0.055 };
+    const REAL_US = { id: "uswest", name: "US West (Oregon)", csvKey: "us", ping: 165, tz: "America/Los_Angeles", color: "#a78bfa", latencyPenalty: 0.60, redsecRate: 0.055 };
+    const VIRTUAL_US = { id: "virtualus", name: "Virtual West US", csvKey: "us", ping: 170, tz: "America/Los_Angeles", color: "#c084fc", latencyPenalty: 0.75, isVirtual: true, redsecRate: 0.055 };
+    const OTHER_REGIONS = { id: "other", name: "Other Regions (EU/East US)", csvKey: "other", ping: 210, tz: "Europe/London", color: "#94a3b8", latencyPenalty: 0.50, redsecRate: 0.040 };
 
     let currentUSMode = 'real'; // 'real' or 'virtual'
     let currentChartView = 'whole'; // 'whole' or 'redsec'
@@ -417,7 +448,7 @@
 
     function getActiveRegions() {
         const usRegion = (currentUSMode === 'virtual') ? VIRTUAL_US : REAL_US;
-        return [...BASE_REGIONS, usRegion];
+        return [...BASE_REGIONS, usRegion, OTHER_REGIONS];
     }
 
     function setUSMode(mode) {
@@ -513,7 +544,8 @@
         const localHour = parseInt(targetHktDate.toLocaleString("en-GB", { timeZone: region.tz, hour: 'numeric', hour12: false }), 10);
         const dayOfWeek = new Date(targetHktDate.toLocaleString("en-US", { timeZone: region.tz })).getDay();
 
-        const regionHolidays = REGIONAL_HOLIDAYS[region.id === 'virtualus' ? 'uswest' : region.id] || [];
+        const regionKey = region.id === 'virtualus' ? 'uswest' : (region.id === 'uswest' ? 'uswest' : (region.id === 'hongkong' ? 'hongkong' : (region.id === 'singapore' ? 'singapore' : (region.id === 'tokyo' ? 'tokyo' : (region.id === 'sydney' ? 'sydney' : 'other')))));
+        const regionHolidays = REGIONAL_HOLIDAYS[regionKey] || [];
         const isHoliday = regionHolidays.includes(localDateStr);
         const isHolidayEve = regionHolidays.includes(nextLocalDateStr) && (localHour >= 18);
         const isWeekend = (dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6);
@@ -531,29 +563,19 @@
             slotBaseline = totalSteamPlayers * (targetPatternVal / basePatternVal);
         }
 
-        const effectivePeak = (isWeekend || isHoliday) ? (region.peakHKT + 1) % 24 : region.peakHKT;
-        let diff = hktHour - effectivePeak;
-        if (diff > 12) diff -= 24;
-        if (diff < -12) diff += 24;
+        // Get exact weight from CSV proportions for this HKT hour
+        const hourlyProportions = CSV_PROPORTIONS[hktHour] || CSV_PROPORTIONS[0];
+        let csvShare = hourlyProportions[region.csvKey] || 0.1;
 
-        const sigma = (diff >= 0) ? region.sigmaFall : region.sigmaRise;
-        let bellCurve = Math.exp(-Math.pow(diff, 2) / (2 * Math.pow(sigma, 2)));
-
-        if (region.isVirtual) {
-            bellCurve = Math.max(bellCurve, 0.35);
+        if (region.isVirtual && region.csvKey === 'us') {
+            csvShare = Math.max(csvShare, 0.22); // Virtual US floor boost during APAC peak
         }
 
-        let hubOverflowMultiplier = 1.0;
-        if (region.isHub && (hktHour >= 21 || hktHour <= 2)) {
-            hubOverflowMultiplier = 1.30; 
-        }
-
-        const dynamicShare = region.baseShare * (0.3 + 0.7 * bellCurve);
-        const effectivePool = slotBaseline * platformMultiplier * dynamicShare * dayMultiplier * region.latencyPenalty * hubOverflowMultiplier;
-        const totalCount = Math.round((effectivePool * 0.18) + (effectivePool * 0.82 * bellCurve));
+        const effectivePool = slotBaseline * platformMultiplier * csvShare * dayMultiplier * region.latencyPenalty;
+        const totalCount = Math.round(effectivePool);
         const redSecCount = Math.max(1, Math.round(totalCount * region.redsecRate));
 
-        return { count: totalCount, redSecCount, dynamicShare, isHoliday, isHolidayEve, localHourStr: `${String(localHour).padStart(2, '0')}:00` };
+        return { count: totalCount, redSecCount, csvShare, isHoliday, isHolidayEve, localHourStr: `${String(localHour).padStart(2, '0')}:00` };
     }
 
     function updateDashboard() {
@@ -576,10 +598,10 @@
             const trafficData = calculatePatternTraffic(currentHKTHour, region, globalSteamPlayers, 0);
             const count = trafficData.count;
             const redSecCount = trafficData.redSecCount;
-            const peakData = calculatePatternTraffic(region.peakHKT, region, globalSteamPlayers, 0);
-            const peakPool = peakData.count;
+            const peakData = calculatePatternTraffic(12, region, globalSteamPlayers, 0); // Approximate peak reference
+            const peakPool = peakData.count || 1000;
             
-            const fillPct = Math.min(100, Math.max(5, (count / (peakPool || 1)) * 100));
+            const fillPct = Math.min(100, Math.max(5, (count / peakPool) * 100));
             const redSecPct = Math.min(100, (redSecCount / count) * 100);
             const mainGamePct = 100 - redSecPct;
             const pingClass = region.ping > 100 ? 'medium' : '';
@@ -632,7 +654,7 @@
                         </div>
                     </div>
                     <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">
-                        <span>Prime Capacity (${Math.round(fillPct)}% of peak)</span>
+                        <span>Share Weight: ${(trafficData.csvShare * 100).toFixed(1)}%</span>
                         <span style="color: #94a3b8;">RedSec Share: ~${redSecCount.toLocaleString()}</span>
                     </div>
                     <div class="progress-bar">
