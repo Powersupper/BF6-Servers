@@ -267,7 +267,7 @@
     <div class="card abstract">
         <h2>How This Radar Works & Dynamic Regional Proportions</h2>
         <p>This dashboard estimates real-time <strong>Battlefield 6</strong> server populations for regions reachable from Hong Kong with under 200ms ping.</p>
-        <p><strong>Multi-Proxy Rotation Chain:</strong> Fully integrated with robust multi-proxy fallback routing (AllOrigins, ThingProxy, and CodeTabs) to guarantee seamless live telemetry synchronization with Steam AppID <code>2807960</code>.</p>
+        <p><strong>Cloudflare Worker Gateway:</strong> Securely proxies live telemetry synchronization with Steam AppID <code>2807960</code> without background loops or CORS blocking.</p>
     </div>
 
     <div class="grid" id="region-cards">
@@ -290,7 +290,6 @@
 </div>
 
 <script>
-    // 1. Regional Holiday Calendars
     const REGIONAL_HOLIDAYS = {
         hongkong: [
             "2026-01-01", "2026-02-17", "2026-02-18", "2026-02-19", "2026-04-03", 
@@ -372,7 +371,7 @@
         updateDashboard();
     }
 
-    // Fully Fixed Force Sync & Multi-Proxy Rotation Chain
+    // Direct Cloudflare Worker Fetch (No auto-refresh loops)
     async function fetchSteamData(force = false) {
         const now = Date.now();
         const countEl = document.getElementById('global-steam-count');
@@ -394,49 +393,28 @@
 
         if (countEl) countEl.innerText = "Syncing with Steam API...";
 
-        const targetUrl = `https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/?appid=${STEAM_APP_ID}`;
-        const encodedUrl = encodeURIComponent(targetUrl);
-        
-        const proxies = [
-            { url: `https://api.allorigins.win/get?url=${encodedUrl}`, type: 'wrapped' },
-            { url: `https://thingproxy.freeboard.io/fetch/${targetUrl}`, type: 'raw' },
-            { url: `https://api.codetabs.com/v1/proxy?quest=${encodedUrl}`, type: 'raw' }
-        ];
+        // Replace with your actual Cloudflare Worker URL
+        const workerUrl = 'https://bf6-steam-proxy.dermotomred.workers.dev';
 
-        let success = false;
-        for (let proxy of proxies) {
-            try {
-                console.log(`Attempting to fetch via proxy: ${proxy.url}`);
-                const response = await fetch(proxy.url, { cache: 'no-store' });
+        try {
+            const response = await fetch(workerUrl, { cache: 'no-store' });
+            if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
+            
+            const data = await response.json();
+            
+            if (data && data.response && typeof data.response.player_count === 'number') {
+                globalSteamPlayers = data.response.player_count;
+                isLiveSync = true; 
                 
-                if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
-                
-                let data;
-                if (proxy.type === 'wrapped') {
-                   const wrapper = await response.json();
-                   data = JSON.parse(wrapper.contents);
-                } else {
-                   data = await response.json();
-                }
-                
-                if (data && data.response && typeof data.response.player_count === 'number') {
-                    globalSteamPlayers = data.response.player_count;
-                    isLiveSync = true; 
-                    
-                    localStorage.setItem(CACHE_KEY, globalSteamPlayers.toString());
-                    localStorage.setItem(CACHE_TIME_KEY, now.toString());
+                localStorage.setItem(CACHE_KEY, globalSteamPlayers.toString());
+                localStorage.setItem(CACHE_TIME_KEY, now.toString());
 
-                    console.log("✅ Successfully fetched live data:", globalSteamPlayers);
-                    success = true;
-                    break;
-                }
-            } catch (err) {
-                console.warn(`❌ Proxy failed: ${proxy.url}`, err.message);
+                console.log("✅ Successfully fetched live data via Worker:", globalSteamPlayers);
+            } else {
+                throw new Error("Invalid payload structure");
             }
-        }
-
-        if (!success) {
-            console.warn("All proxies failed. Falling back to SteamDB pattern baseline.");
+        } catch (err) {
+            console.warn("❌ Worker fetch failed. Falling back to pattern baseline.", err.message);
             isLiveSync = false;
         }
 
@@ -659,8 +637,8 @@
         });
     }
 
+    // Initial load only - background interval loops completely removed
     fetchSteamData();
-    setInterval(() => fetchSteamData(), 300000); 
 </script>
 
 </body>
