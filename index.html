@@ -265,15 +265,16 @@
     </div>
 
     <div class="card abstract">
-        <h2>How This Radar Works & Dynamic Regional Proportions</h2>
-        <p>This dashboard estimates real-time <strong>Battlefield 6</strong> server populations for regions reachable from Hong Kong with under 200ms ping.</p>
-        <p><strong>Cloudflare Worker Gateway:</strong> Securely proxies live telemetry synchronization with Steam AppID <code>2807960</code> without background loops or CORS blocking.</p>
+        <h2>Methodology & Regional Traffic Distribution</h2>
+        <p>This dashboard estimates real-time <strong>Battlefield 6</strong> server populations for gaming hubs accessible from Hong Kong under a 200ms ping threshold. By taking live global telemetry synchronization from Steam AppID <code>2807960</code> via a secure serverless Cloudflare proxy, the application dynamically proportions total activity across international time zones.</p>
+        <p>Each region's player volume is modeled around its unique local peak evening hours, accounting for circadian rhythm curves, weekend surges, and public holidays or holiday-eve boosts. Additionally, network latency penalties gently scale back distant server populations to reflect realistic connection accessibility from the local region, while distinguishing estimated anti-cheat (RedSec) protective footprint ratios (~3%).</p>
     </div>
 
     <div class="grid" id="region-cards">
         <!-- Cards injected via JS -->
     </div>
 
+    <!-- Swapped Position: Proportion Chart Card First -->
     <div class="card">
         <div class="region-header">
             <h2 class="region-name">24-Hour Regional Share Proportions (Stacked Percentage View)</h2>
@@ -281,6 +282,7 @@
         <canvas id="proportionChart" height="100"></canvas>
     </div>
 
+    <!-- Swapped Position: Traffic Forecast Card Second -->
     <div class="card" style="margin-top: 24px;">
         <div class="region-header">
             <h2 class="region-name">24-Hour Future Forecast (Current Time at Left → +23h Future)</h2>
@@ -371,7 +373,6 @@
         updateDashboard();
     }
 
-    // Direct Cloudflare Worker Fetch (No auto-refresh loops)
     async function fetchSteamData(force = false) {
         const now = Date.now();
         const countEl = document.getElementById('global-steam-count');
@@ -394,7 +395,7 @@
         if (countEl) countEl.innerText = "Syncing with Steam API...";
 
         // Replace with your actual Cloudflare Worker URL
-        const workerUrl = 'https://bf6-steam-proxy.dermotomred.workers.dev';
+        const workerUrl = 'https://steam-proxy.yourname.workers.dev';
 
         try {
             const response = await fetch(workerUrl, { cache: 'no-store' });
@@ -408,8 +409,6 @@
                 
                 localStorage.setItem(CACHE_KEY, globalSteamPlayers.toString());
                 localStorage.setItem(CACHE_TIME_KEY, now.toString());
-
-                console.log("✅ Successfully fetched live data via Worker:", globalSteamPlayers);
             } else {
                 throw new Error("Invalid payload structure");
             }
@@ -469,7 +468,7 @@
         const totalCount = Math.round((effectivePool * 0.18) + (effectivePool * 0.82 * bellCurve));
         const redSecCount = Math.max(1, Math.round(totalCount * 0.03));
 
-        return { count: totalCount, redSecCount, dynamicShare, isHoliday, isHolidayEve };
+        return { count: totalCount, redSecCount, dynamicShare, isHoliday, isHolidayEve, localHourStr: `${String(localHour).padStart(2, '0')}:00` };
     }
 
     function updateDashboard() {
@@ -558,7 +557,9 @@
         
         const trafficDatasets = REGIONS.map(region => {
             const data = hours.map((h, index) => calculatePatternTraffic(h, region, globalSteamPlayers, index).count);
-            return { label: region.name, data, borderColor: region.color, backgroundColor: region.color + '20', borderWidth: 2, tension: 0.4, fill: true };
+            // Pre-calculate local times for tooltips
+            const localHours = hours.map(h => calculatePatternTraffic(h, region, globalSteamPlayers, 0).localHourStr);
+            return { label: region.name, data, localHours, borderColor: region.color, backgroundColor: region.color + '20', borderWidth: 2, tension: 0.4, fill: true };
         });
 
         const proportionDatasets = REGIONS.map(region => {
@@ -572,7 +573,8 @@
                 });
                 return totalSum > 0 ? Number(((regionCount / totalSum) * 100).toFixed(1)) : 0;
             });
-            return { label: region.name, data, backgroundColor: region.color, borderWidth: 0, fill: true };
+            const localHours = hours.map(h => calculatePatternTraffic(h, region, globalSteamPlayers, 0).localHourStr);
+            return { label: region.name, data, localHours, backgroundColor: region.color, borderWidth: 0, fill: true };
         });
 
         if (trafficChartInstance) trafficChartInstance.destroy();
@@ -600,17 +602,33 @@
             }
         };
 
+        const sharedTooltipOptions = {
+            responsive: true,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8 } },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const dataset = context.dataset;
+                            const index = context.dataIndex;
+                            const localTime = dataset.localHours ? dataset.localHours[index] : '';
+                            const val = context.parsed.y !== null ? context.parsed.y : context.raw;
+                            const unit = context.chart.config.type === 'line' && context.chart.canvas.id === 'proportionChart' ? '%' : '';
+                            return ` ${dataset.label}: ${val.toLocaleString()}${unit} (Local: ${localTime})`;
+                        }
+                    }
+                }
+            }
+        };
+
         const ctxTraffic = document.getElementById('trafficChart').getContext('2d');
         trafficChartInstance = new Chart(ctxTraffic, {
             type: 'line',
             data: { labels, datasets: trafficDatasets },
             plugins: [highlightCurrentHourPlugin],
             options: {
-                responsive: true,
-                interaction: { mode: 'index', intersect: false },
-                plugins: {
-                    legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8 } }
-                },
+                ...sharedTooltipOptions,
                 scales: {
                     y: { beginAtZero: true, grid: { color: '#334155' } },
                     x: { grid: { color: '#334155' } }
@@ -624,11 +642,7 @@
             data: { labels, datasets: proportionDatasets },
             plugins: [highlightCurrentHourPlugin],
             options: {
-                responsive: true,
-                interaction: { mode: 'index', intersect: false },
-                plugins: {
-                    legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8 } }
-                },
+                ...sharedTooltipOptions,
                 scales: {
                     y: { stacked: true, max: 100, beginAtZero: true, grid: { color: '#334155' }, ticks: { callback: (val) => val + '%' } },
                     x: { stacked: true, grid: { color: '#334155' } }
@@ -637,7 +651,6 @@
         });
     }
 
-    // Initial load only - background interval loops completely removed
     fetchSteamData();
 </script>
 
