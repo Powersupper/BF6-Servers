@@ -232,7 +232,6 @@
             transition: width 0.5s ease-out;
         }
 
-        /* Scrollable Chart Container Styles */
         .chart-scroll-wrapper {
             width: 100%;
             overflow-x: auto;
@@ -285,12 +284,10 @@
         </div>
     </div>
 
-    <!-- Live Regional Cards Grid -->
     <div class="grid" id="region-cards">
         <!-- Cards injected via JS -->
     </div>
 
-    <!-- Proportion Chart Card with Horizontal Scroll Wrapper -->
     <div class="card">
         <div class="region-header">
             <h2 class="region-name">24-Hour Regional Share Proportions (Stacked Percentage View)</h2>
@@ -303,7 +300,6 @@
         </div>
     </div>
 
-    <!-- Traffic Forecast Card with Horizontal Scroll Wrapper -->
     <div class="card" style="margin-top: 24px;">
         <div class="region-header">
             <h2 class="region-name">24-Hour Future Forecast (Current Time at Left → +23h Future)</h2>
@@ -316,11 +312,11 @@
         </div>
     </div>
 
-    <!-- Methodology Abstract Card Moved to Bottom -->
     <div class="card abstract" style="margin-top: 24px;">
         <h2>Methodology & Regional Traffic Distribution</h2>
         <p>This dashboard estimates real-time <strong>Battlefield 6</strong> server populations for gaming hubs accessible from Hong Kong under a 200ms ping threshold. By taking live global telemetry synchronization from Steam AppID <code>2807960</code> via a secure serverless Cloudflare proxy, the application dynamically proportions total activity across international time zones.</p>
         <p>Each region's player volume is modeled around its unique local peak evening hours, accounting for circadian rhythm curves, weekend surges, and public holidays or holiday-eve boosts. Additionally, network latency penalties gently scale back distant server populations to reflect realistic connection accessibility from the local region, while distinguishing estimated anti-cheat (RedSec) protective footprint ratios (~3%).</p>
+        <p><strong>Virtual West US (Global Pool):</strong> Incorporates a simulated cross-play and VPN-routed pool reflecting how North American servers maintain active matchmaking queues during APAC evening hours through blended international participation.</p>
     </div>
 </div>
 
@@ -384,7 +380,8 @@
         { id: "singapore", name: "SEA (Singapore)", baseShare: 0.12, ping: 35, tz: "Asia/Singapore", peakHKT: 22, sigmaRise: 3, sigmaFall: 2.5, isHub: false, color: "#4ade80", latencyPenalty: 0.95 },
         { id: "tokyo", name: "Japan (Tokyo)", baseShare: 0.15, ping: 55, tz: "Asia/Tokyo", peakHKT: 21, sigmaRise: 2.5, sigmaFall: 3, isHub: false, color: "#f472b6", latencyPenalty: 0.90 },
         { id: "sydney", name: "OCE (Sydney)", baseShare: 0.08, ping: 145, tz: "Australia/Sydney", peakHKT: 19, sigmaRise: 3, sigmaFall: 2, isHub: false, color: "#fbbf24", latencyPenalty: 0.70 },
-        { id: "uswest", name: "US West (Oregon)", baseShare: 0.18, ping: 165, tz: "America/Los_Angeles", peakHKT: 12, sigmaRise: 4, sigmaFall: 3.5, isHub: true, color: "#a78bfa", latencyPenalty: 0.60 }
+        { id: "uswest", name: "US West (Oregon)", baseShare: 0.18, ping: 165, tz: "America/Los_Angeles", peakHKT: 12, sigmaRise: 4, sigmaFall: 3.5, isHub: true, color: "#a78bfa", latencyPenalty: 0.60 },
+        { id: "virtualus", name: "Virtual West US (VPN/Cross-Play Pool)", baseShare: 0.16, ping: 170, tz: "America/Los_Angeles", peakHKT: 15, sigmaRise: 5, sigmaFall: 4, isHub: true, color: "#c084fc", latencyPenalty: 0.75, isVirtual: true }
     ];
 
     const STEAM_APP_ID = "2807960"; 
@@ -427,8 +424,7 @@
 
         if (countEl) countEl.innerText = "Syncing with Steam API...";
 
-        // Replace with your actual Cloudflare Worker URL
-        const workerUrl = 'https://bf6-steam-proxy.dermotomred.workers.dev/';
+        const workerUrl = 'https://steam-proxy.yourname.workers.dev';
 
         try {
             const response = await fetch(workerUrl, { cache: 'no-store' });
@@ -489,11 +485,15 @@
         if (diff < -12) diff += 24;
 
         const sigma = (diff >= 0) ? region.sigmaFall : region.sigmaRise;
-        const bellCurve = Math.exp(-Math.pow(diff, 2) / (2 * Math.pow(sigma, 2)));
+        let bellCurve = Math.exp(-Math.pow(diff, 2) / (2 * Math.pow(sigma, 2)));
+
+        if (region.isVirtual) {
+            bellCurve = Math.max(bellCurve, 0.35); // Elevated trough floor for global VPN/crossplay bleed
+        }
 
         let hubOverflowMultiplier = 1.0;
         if (region.isHub && (hktHour >= 21 || hktHour <= 2)) {
-            hubOverflowMultiplier = 1.25; 
+            hubOverflowMultiplier = 1.30; 
         }
 
         const dynamicShare = region.baseShare * (0.3 + 0.7 * bellCurve);
