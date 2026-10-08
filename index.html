@@ -74,6 +74,7 @@
             font-weight: 600;
             cursor: pointer;
             transition: 0.2s;
+            font-size: 13px;
         }
 
         .btn-group button.active {
@@ -89,6 +90,7 @@
             border-radius: 6px;
             cursor: pointer;
             font-weight: 600;
+            font-size: 13px;
         }
 
         .refresh-btn:hover {
@@ -260,10 +262,6 @@
     <div class="header">
         <h1>📡 BF6 RedSec Regional Proportion Radar</h1>
         <div class="controls">
-            <div class="btn-group" title="Select US West Mode">
-                <button id="btn-real-us" class="active" onclick="setUSMode('real')">🇺🇸 Real US West</button>
-                <button id="btn-virtual-us" onclick="setUSMode('virtual')">🌐 Virtual US (VPN/CrossPlay)</button>
-            </div>
             <div class="btn-group">
                 <button id="btn-pc" class="active" onclick="setPlatformMode('pc')">💻 PC Only</button>
                 <button id="btn-cross" onclick="setPlatformMode('crossplay')">🌐 Cross-Play</button>
@@ -321,7 +319,7 @@
         <h2>Methodology & Regional Traffic Distribution</h2>
         <p>This dashboard estimates real-time <strong>Battlefield 6</strong> server populations for gaming hubs accessible from Hong Kong under a 200ms ping threshold. By taking live global telemetry synchronization from Steam AppID <code>2807960</code> via your secure Cloudflare proxy, the application dynamically proportions total activity across international time zones.</p>
         <p>Each region's player volume is modeled around its unique local peak evening hours, accounting for circadian rhythm curves, weekend surges, and public holidays or holiday-eve boosts. Additionally, network latency penalties gently scale back distant server populations to reflect realistic connection accessibility from the local region, while distinguishing estimated anti-cheat (RedSec) protective footprint ratios (~3%).</p>
-        <p><strong>US West Mode Switch:</strong> Switch between <em>Real US West</em> (strict geographic circadian clock) and <em>Virtual US West</em> (simulated cross-play and VPN routing pool maintaining active queues during APAC evening hours).</p>
+        <p><strong>US West Mode Switch:</strong> Use the toggle button directly inside the US West card above to switch between <em>Real US West</em> (strict geographic circadian clock) and <em>Virtual US West</em> (simulated cross-play and VPN routing pool maintaining active queues during APAC evening hours).</p>
     </div>
 </div>
 
@@ -388,7 +386,7 @@
     ];
 
     const REAL_US = { id: "uswest", name: "US West (Oregon)", baseShare: 0.18, ping: 165, tz: "America/Los_Angeles", peakHKT: 12, sigmaRise: 4, sigmaFall: 3.5, isHub: true, color: "#a78bfa", latencyPenalty: 0.60 };
-    const VIRTUAL_US = { id: "virtualus", name: "Virtual West US (VPN/CrossPlay)", baseShare: 0.16, ping: 170, tz: "America/Los_Angeles", peakHKT: 15, sigmaRise: 5, sigmaFall: 4, isHub: true, color: "#c084fc", latencyPenalty: 0.75, isVirtual: true };
+    const VIRTUAL_US = { id: "virtualus", name: "Virtual West US", baseShare: 0.16, ping: 170, tz: "America/Los_Angeles", peakHKT: 15, sigmaRise: 5, sigmaFall: 4, isHub: true, color: "#c084fc", latencyPenalty: 0.75, isVirtual: true };
 
     let currentUSMode = 'real'; // 'real' or 'virtual'
     let isCrossPlay = false;
@@ -405,8 +403,6 @@
 
     function setUSMode(mode) {
         currentUSMode = mode;
-        document.getElementById('btn-real-us').classList.toggle('active', mode === 'real');
-        document.getElementById('btn-virtual-us').classList.toggle('active', mode === 'virtual');
         updateDashboard();
     }
 
@@ -442,7 +438,6 @@
 
         if (countEl) countEl.innerText = "Syncing with Steam API...";
 
-        // User's Cloudflare Worker URL
         const workerUrl = 'https://bf6-steam-proxy.dermotomred.workers.dev/';
 
         try {
@@ -507,7 +502,7 @@
         let bellCurve = Math.exp(-Math.pow(diff, 2) / (2 * Math.pow(sigma, 2)));
 
         if (region.isVirtual) {
-            bellCurve = Math.max(bellCurve, 0.35); // Elevated trough floor for VPN/crossplay bleed
+            bellCurve = Math.max(bellCurve, 0.35);
         }
 
         let hubOverflowMultiplier = 1.0;
@@ -562,6 +557,18 @@
                 statusLabel = `<span style="color:var(--accent); font-size:12px; font-weight:600; margin-left:8px;">[Holiday Eve Surge]</span>`;
             }
 
+            // If this is the US card, embed the toggle switch directly inside the card header!
+            let cardHeaderExtra = '';
+            if (region.id === 'uswest' || region.id === 'virtualus') {
+                const isVirt = (currentUSMode === 'virtual');
+                cardHeaderExtra = `
+                    <div class="btn-group" style="margin-top: 6px;">
+                        <button class="${!isVirt ? 'active' : ''}" onclick="setUSMode('real')">🇺🇸 Real US</button>
+                        <button class="${isVirt ? 'active' : ''}" onclick="setUSMode('virtual')">🌐 Virtual US</button>
+                    </div>
+                `;
+            }
+
             container.innerHTML += `
                 <div class="card" style="margin-bottom:0;">
                     <div class="region-header">
@@ -569,6 +576,7 @@
                             <h3 class="region-name">${region.name} ${statusLabel}</h3>
                             <div class="region-time">Local Time: ${localTimeStr}</div>
                         </div>
+                        ${cardHeaderExtra}
                     </div>
                     <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:16px;">
                         <span class="badge ping ${pingClass}">${region.ping}ms Ping</span>
