@@ -231,6 +231,27 @@
             background: #64748b; 
             transition: width 0.5s ease-out;
         }
+
+        /* Scrollable Chart Container Styles */
+        .chart-scroll-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 8px;
+        }
+
+        .chart-container-inner {
+            min-width: 800px; /* Keeps chart legible and wide on mobile */
+            height: 320px;
+        }
+
+        .scroll-hint {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-align: right;
+            margin-bottom: 8px;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -274,20 +295,30 @@
         <!-- Cards injected via JS -->
     </div>
 
-    <!-- Swapped Position: Proportion Chart Card First -->
+    <!-- Proportion Chart Card with Horizontal Scroll Wrapper -->
     <div class="card">
         <div class="region-header">
             <h2 class="region-name">24-Hour Regional Share Proportions (Stacked Percentage View)</h2>
         </div>
-        <canvas id="proportionChart" height="100"></canvas>
+        <div class="scroll-hint">💡 Tip: Drag or swipe horizontally to view all 24 hours</div>
+        <div class="chart-scroll-wrapper">
+            <div class="chart-container-inner">
+                <canvas id="proportionChart"></canvas>
+            </div>
+        </div>
     </div>
 
-    <!-- Swapped Position: Traffic Forecast Card Second -->
+    <!-- Traffic Forecast Card with Horizontal Scroll Wrapper -->
     <div class="card" style="margin-top: 24px;">
         <div class="region-header">
             <h2 class="region-name">24-Hour Future Forecast (Current Time at Left → +23h Future)</h2>
         </div>
-        <canvas id="trafficChart" height="100"></canvas>
+        <div class="scroll-hint">💡 Tip: Drag or swipe horizontally to view all 24 hours</div>
+        <div class="chart-scroll-wrapper">
+            <div class="chart-container-inner">
+                <canvas id="trafficChart"></canvas>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -557,7 +588,6 @@
         
         const trafficDatasets = REGIONS.map(region => {
             const data = hours.map((h, index) => calculatePatternTraffic(h, region, globalSteamPlayers, index).count);
-            // Pre-calculate local times for tooltips
             const localHours = hours.map(h => calculatePatternTraffic(h, region, globalSteamPlayers, 0).localHourStr);
             return { label: region.name, data, localHours, borderColor: region.color, backgroundColor: region.color + '20', borderWidth: 2, tension: 0.4, fill: true };
         });
@@ -590,20 +620,23 @@
                 const xAxis = chart.scales.x;
                 const yAxis = chart.scales.y;
                 const xPos = xAxis.getPixelForValue(0);
-                ctx.save();
-                ctx.beginPath();
-                ctx.lineWidth = 3;
-                ctx.strokeStyle = 'rgba(56, 189, 248, 0.8)';
-                ctx.setLineDash([4, 4]);
-                ctx.moveTo(xPos, yAxis.top);
-                ctx.lineTo(xPos, yAxis.bottom);
-                ctx.stroke();
-                ctx.restore();
+                if (xPos !== undefined && !isNaN(xPos)) {
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = 'rgba(56, 189, 248, 0.8)';
+                    ctx.setLineDash([4, 4]);
+                    ctx.moveTo(xPos, yAxis.top);
+                    ctx.lineTo(xPos, yAxis.bottom);
+                    ctx.stroke();
+                    ctx.restore();
+                }
             }
         };
 
-        const sharedTooltipOptions = {
+        const sharedChartOptions = {
             responsive: true,
+            maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             plugins: {
                 legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8 } },
@@ -628,7 +661,7 @@
             data: { labels, datasets: trafficDatasets },
             plugins: [highlightCurrentHourPlugin],
             options: {
-                ...sharedTooltipOptions,
+                ...sharedChartOptions,
                 scales: {
                     y: { beginAtZero: true, grid: { color: '#334155' } },
                     x: { grid: { color: '#334155' } }
@@ -642,7 +675,7 @@
             data: { labels, datasets: proportionDatasets },
             plugins: [highlightCurrentHourPlugin],
             options: {
-                ...sharedTooltipOptions,
+                ...sharedChartOptions,
                 scales: {
                     y: { stacked: true, max: 100, beginAtZero: true, grid: { color: '#334155' }, ticks: { callback: (val) => val + '%' } },
                     x: { stacked: true, grid: { color: '#334155' } }
