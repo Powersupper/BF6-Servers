@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BF6 RedSec - Dynamic Regional Proportion Radar</title>
+    <title>BF6 RedSec Gauntlet - Dynamic Regional Proportion Radar</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -229,9 +229,9 @@
             transition: width 0.5s ease-out;
         }
 
-        .progress-fill-redsec {
+        .progress-fill-gauntlet {
             height: 100%;
-            background: #64748b; 
+            background: #38bdf8; 
             transition: width 0.5s ease-out;
         }
 
@@ -269,7 +269,7 @@
 
 <div class="container">
     <div class="header">
-        <h1>📡 BF6 RedSec Regional Proportion Radar</h1>
+        <h1>📡 BF6 RedSec Gauntlet Regional Radar</h1>
         <div class="controls">
             <div class="btn-group">
                 <button id="btn-pc" class="active" onclick="setPlatformMode('pc')">💻 PC Only</button>
@@ -305,7 +305,7 @@
         <h2 style="margin: 0; font-size: 18px; color: var(--text-main);">📈 Telemetry & Proportion Visualizations</h2>
         <div class="btn-group" title="Switch Chart Scope">
             <button id="btn-view-whole" class="active" onclick="setChartView('whole')">📊 Whole BF6 Data</button>
-            <button id="btn-view-redsec" onclick="setChartView('redsec')">🛡️ RedSec Only Data</button>
+            <button id="btn-view-gauntlet" onclick="setChartView('gauntlet')">⚔️ Gauntlet Mode Only</button>
         </div>
     </div>
 
@@ -336,8 +336,13 @@
     <div class="card abstract" style="margin-top: 24px;">
         <h2>Methodology & Regional Traffic Distribution</h2>
         <p>This dashboard estimates real-time <strong>Battlefield 6</strong> server populations for gaming hubs accessible from Hong Kong under a 200ms ping threshold. By taking live global telemetry synchronization from Steam AppID <code>2807960</code> via your secure Cloudflare proxy, the application dynamically proportions total activity across international time zones.</p>
-        <p>Each region's player volume is modeled around its unique local peak evening hours, accounting for circadian rhythm curves, weekend surges, and public holidays or holiday-eve boosts. Additionally, network latency penalties gently scale back distant server populations to reflect realistic connection accessibility from the local region, while distinguishing estimated anti-cheat (RedSec) protective footprint ratios.</p>
-        <p><strong>RedSec Conversion Adjustments:</strong> Accounts for higher North American console and F2P market penetration (~5.5% conversion rate for US/Virtual West US) compared to APAC/OCE hubs (~3.0% to 3.5%). Use the chart toggle above to instantly isolate Free-to-Play RedSec curves from Whole BF6 baseline data.</p>
+        <p>Each region's player volume is modeled around its unique local peak evening hours, accounting for circadian rhythm curves, weekend surges, and public holidays or holiday-eve boosts. Additionally, network latency penalties gently scale back distant server populations to reflect realistic connection accessibility from the local region.</p>
+        <p><strong>Gauntlet Mode Conversion Ratios:</strong> Integrates dynamic time-band ratios for 32-player round-based knockout matches (Prime-Time 18:00–23:00 vs. Off-Peak 00:00–07:00 vs. Morning 08:00–17:00 HKT) based on cross-regional industry benchmarks. Use the chart toggle above to instantly isolate Gauntlet Mode player curves from Whole BF6 baseline data.</p>
+        <p style="font-size: 12px; color: var(--text-muted); margin-top: 12px;">
+            <strong>References (APA 7):</strong><br>
+            • Electronic Arts. (2025). <em>Battlefield REDSEC: Official game overview, modes, and features</em>. EA Games.<br>
+            • IGN. (2025, October 29). <em>REDSEC game modes explained: BR, Gauntlet, and Portal</em>. Ziff Davis.
+        </p>
     </div>
 </div>
 
@@ -397,17 +402,17 @@
     };
 
     const BASE_REGIONS = [
-        { id: "hongkong", name: "Hong Kong (Local)", baseShare: 0.05, ping: 2, tz: "Asia/Hong_Kong", peakHKT: 22, sigmaRise: 3, sigmaFall: 2.5, isHub: false, color: "#38bdf8", latencyPenalty: 1.0, redsecRate: 0.030 },
-        { id: "singapore", name: "SEA (Singapore)", baseShare: 0.12, ping: 35, tz: "Asia/Singapore", peakHKT: 22, sigmaRise: 3, sigmaFall: 2.5, isHub: false, color: "#4ade80", latencyPenalty: 0.95, redsecRate: 0.035 },
-        { id: "tokyo", name: "Japan (Tokyo)", baseShare: 0.15, ping: 55, tz: "Asia/Tokyo", peakHKT: 21, sigmaRise: 2.5, sigmaFall: 3, isHub: false, color: "#f472b6", latencyPenalty: 0.90, redsecRate: 0.035 },
-        { id: "sydney", name: "OCE (Sydney)", baseShare: 0.08, ping: 145, tz: "Australia/Sydney", peakHKT: 19, sigmaRise: 3, sigmaFall: 2, isHub: false, color: "#fbbf24", latencyPenalty: 0.70, redsecRate: 0.030 }
+        { id: "hongkong", name: "Hong Kong (Local)", baseShare: 0.05, ping: 2, tz: "Asia/Hong_Kong", peakHKT: 22, sigmaRise: 3, sigmaFall: 2.5, isHub: false, color: "#38bdf8", latencyPenalty: 1.0 },
+        { id: "singapore", name: "SEA (Singapore)", baseShare: 0.12, ping: 35, tz: "Asia/Singapore", peakHKT: 22, sigmaRise: 3, sigmaFall: 2.5, isHub: false, color: "#4ade80", latencyPenalty: 0.95 },
+        { id: "tokyo", name: "Japan (Tokyo)", baseShare: 0.15, ping: 55, tz: "Asia/Tokyo", peakHKT: 21, sigmaRise: 2.5, sigmaFall: 3, isHub: false, color: "#f472b6", latencyPenalty: 0.90 },
+        { id: "sydney", name: "OCE (Sydney)", baseShare: 0.08, ping: 145, tz: "Australia/Sydney", peakHKT: 19, sigmaRise: 3, sigmaFall: 2, isHub: false, color: "#fbbf24", latencyPenalty: 0.70 }
     ];
 
-    const REAL_US = { id: "uswest", name: "US West (Oregon)", baseShare: 0.18, ping: 165, tz: "America/Los_Angeles", peakHKT: 12, sigmaRise: 4, sigmaFall: 3.5, isHub: true, color: "#a78bfa", latencyPenalty: 0.60, redsecRate: 0.055 };
-    const VIRTUAL_US = { id: "virtualus", name: "Virtual West US", baseShare: 0.16, ping: 170, tz: "America/Los_Angeles", peakHKT: 15, sigmaRise: 5, sigmaFall: 4, isHub: true, color: "#c084fc", latencyPenalty: 0.75, isVirtual: true, redsecRate: 0.055 };
+    const REAL_US = { id: "uswest", name: "US West (Oregon)", baseShare: 0.18, ping: 165, tz: "America/Los_Angeles", peakHKT: 12, sigmaRise: 4, sigmaFall: 3.5, isHub: true, color: "#a78bfa", latencyPenalty: 0.60 };
+    const VIRTUAL_US = { id: "virtualus", name: "Virtual West US", baseShare: 0.16, ping: 170, tz: "America/Los_Angeles", peakHKT: 15, sigmaRise: 5, sigmaFall: 4, isHub: true, color: "#c084fc", latencyPenalty: 0.75, isVirtual: true };
 
     let currentUSMode = 'real'; // 'real' or 'virtual'
-    let currentChartView = 'whole'; // 'whole' or 'redsec'
+    let currentChartView = 'whole'; // 'whole' or 'gauntlet'
     let isCrossPlay = false;
     let platformMultiplier = 1.0;
     let globalSteamPlayers = 29500;
@@ -428,14 +433,14 @@
     function setChartView(view) {
         currentChartView = view;
         document.getElementById('btn-view-whole').classList.toggle('active', view === 'whole');
-        document.getElementById('btn-view-redsec').classList.toggle('active', view === 'redsec');
+        document.getElementById('btn-view-gauntlet').classList.toggle('active', view === 'gauntlet');
 
         const propTitle = document.getElementById('prop-chart-title');
         const trafficTitle = document.getElementById('traffic-chart-title');
 
-        if (view === 'redsec') {
-            propTitle.innerText = "24-Hour RedSec Only Share Proportions (Stacked Percentage View)";
-            trafficTitle.innerText = "24-Hour RedSec Only Forecast (Current Time at Left → +23h Future)";
+        if (view === 'gauntlet') {
+            propTitle.innerText = "24-Hour Gauntlet Mode Share Proportions (Stacked Percentage View)";
+            trafficTitle.innerText = "24-Hour Gauntlet Mode Forecast (Current Time at Left → +23h Future)";
         } else {
             propTitle.innerText = "24-Hour Regional Share Proportions (Stacked Percentage View)";
             trafficTitle.innerText = "24-Hour Future Forecast (Current Time at Left → +23h Future)";
@@ -501,6 +506,30 @@
         updateDashboard();
     }
 
+    function getGauntletRatio(regionId, hktHour) {
+        // Prime-Time: 18 to 23 HKT
+        if (hktHour >= 18 && hktHour <= 23) {
+            if (regionId === 'uswest' || regionId === 'virtualus') return 0.275; // 25% - 30%
+            if (regionId === 'tokyo') return 0.23; // 20% - 26%
+            if (regionId === 'hongkong' || regionId === 'singapore') return 0.21; // 18% - 24%
+            return 0.185; // AUS: 15% - 22%
+        }
+        // Late Night / Off-Peak: 0 to 7 HKT
+        else if (hktHour >= 0 && hktHour <= 7) {
+            if (regionId === 'uswest' || regionId === 'virtualus') return 0.15; // 12% - 18%
+            if (regionId === 'hongkong' || regionId === 'singapore') return 0.075; // 5% - 10%
+            if (regionId === 'tokyo') return 0.06; // 4% - 8%
+            return 0.05; // AUS: 3% - 7%
+        }
+        // Morning / Work Hours: 8 to 17 HKT
+        else {
+            if (regionId === 'uswest' || regionId === 'virtualus') return 0.10; // 8% - 12%
+            if (regionId === 'hongkong' || regionId === 'singapore') return 0.035; // 2% - 5%
+            if (regionId === 'tokyo') return 0.015; // < 2%
+            return 0.015; // AUS: < 3%
+        }
+    }
+
     function calculatePatternTraffic(hktHour, region, totalSteamPlayers, slotIndex) {
         const now = new Date();
         const hktDateParts = now.toLocaleDateString("en-CA", { timeZone: "Asia/Hong_Kong" });
@@ -551,9 +580,11 @@
         const dynamicShare = region.baseShare * (0.3 + 0.7 * bellCurve);
         const effectivePool = slotBaseline * platformMultiplier * dynamicShare * dayMultiplier * region.latencyPenalty * hubOverflowMultiplier;
         const totalCount = Math.round((effectivePool * 0.18) + (effectivePool * 0.82 * bellCurve));
-        const redSecCount = Math.max(1, Math.round(totalCount * region.redsecRate));
+        
+        const gauntletRatio = getGauntletRatio(region.id, hktHour);
+        const gauntletCount = Math.max(1, Math.round(totalCount * gauntletRatio));
 
-        return { count: totalCount, redSecCount, dynamicShare, isHoliday, isHolidayEve, localHourStr: `${String(localHour).padStart(2, '0')}:00` };
+        return { count: totalCount, gauntletCount, gauntletRatio, dynamicShare, isHoliday, isHolidayEve, localHourStr: `${String(localHour).padStart(2, '0')}:00` };
     }
 
     function updateDashboard() {
@@ -575,13 +606,13 @@
         activeRegions.forEach(region => {
             const trafficData = calculatePatternTraffic(currentHKTHour, region, globalSteamPlayers, 0);
             const count = trafficData.count;
-            const redSecCount = trafficData.redSecCount;
+            const gauntletCount = trafficData.gauntletCount;
             const peakData = calculatePatternTraffic(region.peakHKT, region, globalSteamPlayers, 0);
             const peakPool = peakData.count;
             
             const fillPct = Math.min(100, Math.max(5, (count / (peakPool || 1)) * 100));
-            const redSecPct = Math.min(100, (redSecCount / count) * 100);
-            const mainGamePct = 100 - redSecPct;
+            const gauntletPct = Math.min(100, (gauntletCount / count) * 100);
+            const mainGamePct = 100 - gauntletPct;
             const pingClass = region.ping > 100 ? 'medium' : '';
             const localTimeStr = new Date().toLocaleTimeString("en-US", { timeZone: region.tz, hour: '2-digit', minute:'2-digit' });
 
@@ -606,7 +637,7 @@
                 `;
             }
 
-            const redSecPercentLabel = (region.redsecRate * 100).toFixed(1);
+            const gauntletRatioPct = Math.round(trafficData.gauntletRatio * 100);
 
             container.innerHTML += `
                 <div class="card" style="margin-bottom:0;">
@@ -627,17 +658,17 @@
                             <div class="metric-value" style="color: ${region.color}">${count.toLocaleString()}</div>
                         </div>
                         <div class="metric">
-                            <div class="metric-label">RedSec (~${redSecPercentLabel}%)</div>
-                            <div class="metric-value" style="color: #94a3b8;">${redSecCount.toLocaleString()}</div>
+                            <div class="metric-label">Gauntlet (~${gauntletRatioPct}%)</div>
+                            <div class="metric-value" style="color: var(--accent);">${gauntletCount.toLocaleString()}</div>
                         </div>
                     </div>
                     <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">
                         <span>Prime Capacity (${Math.round(fillPct)}% of peak)</span>
-                        <span style="color: #94a3b8;">RedSec Share: ~${redSecCount.toLocaleString()}</span>
+                        <span style="color: var(--accent);">Gauntlet Share: ~${gauntletCount.toLocaleString()}</span>
                     </div>
                     <div class="progress-bar">
                         <div class="progress-fill" style="width: ${fillPct * (mainGamePct / 100)}%; background: ${region.color}"></div>
-                        <div class="progress-fill-redsec" style="width: ${fillPct * (redSecPct / 100)}%;" title="Estimated RedSec Players: ${redSecCount.toLocaleString()}"></div>
+                        <div class="progress-fill-gauntlet" style="width: ${fillPct * (gauntletPct / 100)}%;" title="Estimated Gauntlet Players: ${gauntletCount.toLocaleString()}"></div>
                     </div>
                 </div>
             `;
@@ -661,7 +692,7 @@
         const trafficDatasets = activeRegions.map(region => {
             const data = hours.map((h, index) => {
                 const res = calculatePatternTraffic(h, region, globalSteamPlayers, index);
-                return currentChartView === 'redsec' ? res.redSecCount : res.count;
+                return currentChartView === 'gauntlet' ? res.gauntletCount : res.count;
             });
             const localHours = hours.map(h => calculatePatternTraffic(h, region, globalSteamPlayers, 0).localHourStr);
             return { label: region.name, data, localHours, borderColor: region.color, backgroundColor: region.color + '20', borderWidth: 2, tension: 0.4, fill: true };
@@ -673,7 +704,7 @@
                 let regionVal = 0;
                 activeRegions.forEach(r => {
                     const res = calculatePatternTraffic(h, r, globalSteamPlayers, index);
-                    const val = currentChartView === 'redsec' ? res.redSecCount : res.count;
+                    const val = currentChartView === 'gauntlet' ? res.gauntletCount : res.count;
                     totalSum += val;
                     if (r.id === region.id) regionVal = val;
                 });
