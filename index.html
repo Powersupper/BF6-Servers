@@ -1,10 +1,10 @@
-<!-- BUILD VERSION: v1.3.2 | Last Updated: 2026-10-09 | Cloudflare D1 Integrated Frontend -->
+<!-- BUILD VERSION: v1.3.3 | Last Updated: 2026-10-09 | Cloudflare D1 & Dual Chart Fix -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BF6 RedSec - Dynamic Regional Proportion Radar (v1.3.2)</title>
+    <title>BF6 RedSec - Dynamic Regional Proportion Radar (v1.3.3)</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -207,19 +207,8 @@
             border: 1px solid rgba(74, 222, 128, 0.2);
         }
 
-        .badge.ping.medium {
-            background: rgba(251, 191, 36, 0.1);
-            color: var(--warning);
-            border: 1px solid rgba(251, 191, 36, 0.2);
-        }
-
         .badge.holiday {
             background: var(--warning);
-            color: #000;
-        }
-
-        .badge.eve {
-            background: var(--accent);
             color: #000;
         }
 
@@ -299,7 +288,7 @@
 
 <div class="container">
     <div class="badge-bar">
-        <span class="version-tag">📦 BUILD: v1.3.2</span>
+        <span class="version-tag">📦 BUILD: v1.3.3</span>
         <span class="ai-status-badge">✨ Cloudflare D1 Connected (Self-Calibrating)</span>
     </div>
 
@@ -368,14 +357,14 @@
     </div>
 
     <div class="card abstract" style="margin-top: 24px;">
-        <h2>Methodology & Cloudflare Integration (v1.3.2)</h2>
-        <p>This build connects directly to your Cloudflare Worker and D1 SQL database backend, logging live telemetry automatically to refine regional estimations over time.</p>
+        <h2>Methodology & Cloudflare Integration (v1.3.3)</h2>
+        <p>This build connects directly to your Cloudflare Worker and D1 SQL database backend, logging live telemetry automatically while fully rendering proportional and traffic forecasts.</p>
     </div>
 </div>
 
 <script>
     // Replace with your actual deployed Cloudflare Worker URL from Step 5
-    const CLOUDFLARE_API_URL = "https://bf6-calibration-api.dermotomred.workers.dev/api/calibrate";
+    const CLOUDFLARE_API_URL = "https://bf6-calibration-api.yourname.workers.dev/api/calibrate";
 
     const REGIONAL_HOLIDAYS = {
         hongkong: ["2026-01-01", "2026-02-17", "2026-02-18", "2026-04-03", "2026-04-04", "2026-05-01", "2026-07-01", "2026-10-01", "2026-12-25"],
@@ -436,6 +425,7 @@
     let isCrossPlay = false;
     let globalSteamPlayers = 29500;
     let trafficChartInstance = null;
+    let proportionChartInstance = null;
     let isLiveSync = false;
 
     function getActiveRegions() {
@@ -477,10 +467,10 @@
 
     async function fetchSteamData(force = false) {
         const countEl = document.getElementById('global-steam-count');
+        const statusEl = document.getElementById('status-mode');
         const STEAM_APP_ID = "2807960";
         const CACHE_KEY = `steamData_${STEAM_APP_ID}`;
         const CACHE_TIME_KEY = `steamTime_${STEAM_APP_ID}`;
-        const now = Date.now();
 
         if (force) {
             localStorage.removeItem(CACHE_KEY);
@@ -502,6 +492,13 @@
         } catch (err) {
             isLiveSync = false;
         }
+
+        if (statusEl) {
+            const modeText = isCrossPlay ? "Cross-Play Active" : "PC Only Active";
+            const syncText = isLiveSync ? " | Cloudflare Live Sync" : " | Static Fallback";
+            statusEl.innerText = modeText + syncText;
+        }
+
         updateDashboard();
     }
 
@@ -540,6 +537,14 @@
 
     function updateDashboard() {
         document.getElementById('global-steam-count').innerText = globalSteamPlayers.toLocaleString();
+        
+        const statusEl = document.getElementById('status-mode');
+        if (statusEl) {
+            const modeText = isCrossPlay ? "Cross-Play Active" : "PC Only Active";
+            const syncText = isLiveSync ? " | Cloudflare Live Sync" : " | Static Fallback";
+            statusEl.innerText = modeText + syncText;
+        }
+
         const container = document.getElementById('region-cards');
         container.innerHTML = '';
         const currentHKTHour = parseInt(new Date().toLocaleString("en-GB", { timeZone: "Asia/Hong_Kong", hour: 'numeric', hour12: false }), 10);
@@ -551,7 +556,7 @@
             const redSecPct = Math.min(100, (trafficData.redSecCount / trafficData.count) * 100);
             const localTimeStr = new Date().toLocaleTimeString("en-US", { timeZone: region.tz, hour: '2-digit', minute:'2-digit' });
 
-            // Send live telemetry record to Cloudflare D1
+            // Send telemetry record to Cloudflare D1
             sendTelemetryToCloudflare(region.id, trafficData.count);
 
             let cardHeaderExtra = '';
@@ -609,6 +614,8 @@
         }
 
         const activeRegions = getActiveRegions();
+        
+        // 1. Traffic Chart Datasets
         const trafficDatasets = activeRegions.map(region => {
             const data = hours.map((h, index) => {
                 const res = calculatePatternTraffic(h, region, globalSteamPlayers, index);
@@ -623,6 +630,30 @@
             type: 'line',
             data: { labels, datasets: trafficDatasets },
             options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        // 2. Proportion Chart Datasets (Stacked Percentage View)
+        const proportionDatasets = activeRegions.map(region => {
+            const data = hours.map(h => {
+                const hourlyProportions = CASCADING_PROPORTIONS[h] || CASCADING_PROPORTIONS[0];
+                return (hourlyProportions[region.csvKey] || 0.1) * 100;
+            });
+            return { label: region.name, data, backgroundColor: region.color, borderWidth: 0 };
+        });
+
+        if (proportionChartInstance) proportionChartInstance.destroy();
+        const ctxProp = document.getElementById('proportionChart').getContext('2d');
+        proportionChartInstance = new Chart(ctxProp, {
+            type: 'bar',
+            data: { labels, datasets: proportionDatasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { stacked: true },
+                    y: { stacked: true, max: 100, ticks: { callback: (val) => val + '%' } }
+                }
+            }
         });
     }
 
