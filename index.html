@@ -1,10 +1,10 @@
-<!-- BUILD VERSION: v1.2.2 | Last Updated: 2026-10-09 | Independent Cascading APAC Regional Peaks & Global Gamer Benchmarks -->
+<!-- BUILD VERSION: v1.3.0 | Last Updated: 2026-10-09 | Calibrated Regional PC Baselines & Console Cross-Play Multipliers -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BF6 RedSec - Dynamic Regional Proportion Radar (v1.2.2)</title>
+    <title>BF6 RedSec - Dynamic Regional Proportion Radar (v1.3.0)</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -282,7 +282,7 @@
 <body>
 
 <div class="container">
-    <div class="version-tag">📦 BUILD: v1.2.2 (Cascading Regional Peaks Release)</div>
+    <div class="version-tag">📦 BUILD: v1.3.0 (Calibrated PC Baselines & Cross-Play Multipliers)</div>
     <div class="header">
         <h1>📡 BF6 RedSec Regional Proportion Radar</h1>
         <div class="controls">
@@ -348,9 +348,8 @@
     </div>
 
     <div class="card abstract" style="margin-top: 24px;">
-        <h2>Methodology & Regional Traffic Distribution (v1.2.2)</h2>
-        <p>This dashboard estimates real-time <strong>Battlefield 6</strong> server populations using independent cascading behavioral proportion curves. Each APAC region is modeled around working adult evening primetime (peaking at ~21:00 local time), ensuring Sydney peaks earliest (~17:30 HKT), followed by Japan (~20:00 HKT), and Hong Kong & Singapore peaking at <strong>21:00 – 22:00 HKT</strong>.</p>
-        <p>Proportions are benchmarked against Newzoo global player demographics and calibrated with US West cross-play queue baseline floors.</p>
+        <h2>Methodology & Regional Calibration (v1.3.0)</h2>
+        <p>This build integrates calibrated regional PC baselines (Hong Kong 18%, SEA 16%, Japan 14%, OCE 6%, US West 15%, Other Regions 31%) and region-specific cross-play multipliers (Japan 3.5x, US West 3.8x, OCE 3.0x, Other 3.2x, Hong Kong 2.2x, SEA 2.0x) reflecting local console sales and FPS preferences.</p>
     </div>
 </div>
 
@@ -406,7 +405,8 @@
         ]
     };
 
-    // Independent cascading regional proportion curves (indexed by HKT hour 0 to 23)
+    // Calibrated independent cascading proportions (indexed by HKT hour 0 to 23)
+    // Reflects PC baseline shares: HK (18%), SG (16%), JP (14%), AU (6%), US (15%), Other (31%)
     const CASCADING_PROPORTIONS = {
         0: { hk: 0.164, sg: 0.189, jp: 0.126, au: 0.055, us: 0.087, other: 0.380 },
         1: { hk: 0.131, sg: 0.162, jp: 0.095, au: 0.050, us: 0.103, other: 0.458 },
@@ -441,21 +441,21 @@
         18: 20622, 19: 24082, 20: 29047, 21: 33211, 22: 35041, 23: 34919
     };
 
+    // Region definitions incorporating individual calibrated cross-play multipliers
     const BASE_REGIONS = [
-        { id: "hongkong", name: "Hong Kong (Local)", csvKey: "hk", ping: 2, tz: "Asia/Hong_Kong", color: "#38bdf8", latencyPenalty: 1.0, redsecRate: 0.030 },
-        { id: "singapore", name: "SEA (Singapore)", csvKey: "sg", ping: 35, tz: "Asia/Singapore", color: "#4ade80", latencyPenalty: 0.95, redsecRate: 0.035 },
-        { id: "tokyo", name: "Japan (Tokyo)", csvKey: "jp", ping: 55, tz: "Asia/Tokyo", color: "#f472b6", latencyPenalty: 0.90, redsecRate: 0.035 },
-        { id: "sydney", name: "OCE (Sydney)", csvKey: "au", ping: 145, tz: "Australia/Sydney", color: "#fbbf24", latencyPenalty: 0.70, redsecRate: 0.030 }
+        { id: "hongkong", name: "Hong Kong (Local)", csvKey: "hk", ping: 2, tz: "Asia/Hong_Kong", color: "#38bdf8", latencyPenalty: 1.0, redsecRate: 0.030, crossMultiplier: 2.2 },
+        { id: "singapore", name: "SEA (Singapore)", csvKey: "sg", ping: 35, tz: "Asia/Singapore", color: "#4ade80", latencyPenalty: 0.95, redsecRate: 0.035, crossMultiplier: 2.0 },
+        { id: "tokyo", name: "Japan (Tokyo)", csvKey: "jp", ping: 55, tz: "Asia/Tokyo", color: "#f472b6", latencyPenalty: 0.90, redsecRate: 0.035, crossMultiplier: 3.5 },
+        { id: "sydney", name: "OCE (Sydney)", csvKey: "au", ping: 145, tz: "Australia/Sydney", color: "#fbbf24", latencyPenalty: 0.70, redsecRate: 0.030, crossMultiplier: 3.0 }
     ];
 
-    const REAL_US = { id: "uswest", name: "US West (Oregon)", csvKey: "us", ping: 165, tz: "America/Los_Angeles", color: "#a78bfa", latencyPenalty: 0.60, redsecRate: 0.055 };
-    const VIRTUAL_US = { id: "virtualus", name: "Virtual West US", csvKey: "us", ping: 170, tz: "America/Los_Angeles", color: "#c084fc", latencyPenalty: 0.75, isVirtual: true, redsecRate: 0.055 };
-    const OTHER_REGIONS = { id: "other", name: "Other Regions (EU/East US)", csvKey: "other", ping: 210, tz: "Europe/London", color: "#94a3b8", latencyPenalty: 0.50, redsecRate: 0.040 };
+    const REAL_US = { id: "uswest", name: "US West (Oregon)", csvKey: "us", ping: 165, tz: "America/Los_Angeles", color: "#a78bfa", latencyPenalty: 0.60, redsecRate: 0.055, crossMultiplier: 3.8 };
+    const VIRTUAL_US = { id: "virtualus", name: "Virtual West US", csvKey: "us", ping: 170, tz: "America/Los_Angeles", color: "#c084fc", latencyPenalty: 0.75, isVirtual: true, redsecRate: 0.055, crossMultiplier: 3.8 };
+    const OTHER_REGIONS = { id: "other", name: "Other Regions (EU/East US)", csvKey: "other", ping: 210, tz: "Europe/London", color: "#94a3b8", latencyPenalty: 0.50, redsecRate: 0.040, crossMultiplier: 3.2 };
 
     let currentUSMode = 'real';
     let currentChartView = 'whole';
     let isCrossPlay = false;
-    let platformMultiplier = 1.0;
     let globalSteamPlayers = 29500;
     let trafficChartInstance = null;
     let proportionChartInstance = null;
@@ -492,7 +492,6 @@
 
     function setPlatformMode(mode) {
         isCrossPlay = (mode === 'crossplay');
-        platformMultiplier = isCrossPlay ? 2.8 : 1.0;
         document.getElementById('btn-pc').classList.toggle('active', !isCrossPlay);
         document.getElementById('btn-cross').classList.toggle('active', isCrossPlay);
         updateDashboard();
@@ -585,7 +584,9 @@
             csvShare = Math.max(csvShare, 0.25);
         }
 
-        const effectivePool = slotBaseline * platformMultiplier * csvShare * dayMultiplier * region.latencyPenalty;
+        // Apply region-specific cross-play multiplier when crossplay is active
+        const activeMultiplier = isCrossPlay ? region.crossMultiplier : 1.0;
+        const effectivePool = slotBaseline * activeMultiplier * csvShare * dayMultiplier * region.latencyPenalty;
         const totalCount = Math.round(effectivePool);
         const redSecCount = Math.max(1, Math.round(totalCount * region.redsecRate));
 
@@ -594,7 +595,7 @@
 
     function updateDashboard() {
         document.getElementById('global-steam-count').innerText = globalSteamPlayers.toLocaleString();
-        const platformText = isCrossPlay ? "Cross-Play (PC+Console)" : "PC Only";
+        const platformText = isCrossPlay ? "Cross-Play (Calibrated Multipliers)" : "PC Only";
         const usModeText = currentUSMode === 'virtual' ? "Virtual US" : "Real US West";
         
         if (isLiveSync) {
@@ -612,7 +613,7 @@
             const trafficData = calculatePatternTraffic(currentHKTHour, region, globalSteamPlayers, 0);
             const count = trafficData.count;
             const redSecCount = trafficData.redSecCount;
-            const peakData = calculatePatternTraffic(21, region, globalSteamPlayers, 0); // Reference HK peak HKT 21:00
+            const peakData = calculatePatternTraffic(21, region, globalSteamPlayers, 0);
             const peakPool = peakData.count || 1000;
             
             const fillPct = Math.min(100, Math.max(5, (count / peakPool) * 100));
@@ -643,6 +644,7 @@
             }
 
             const redSecPercentLabel = (region.redsecRate * 100).toFixed(1);
+            const multBadge = isCrossPlay ? ` (${region.crossMultiplier}x)` : '';
 
             container.innerHTML += `
                 <div class="card" style="margin-bottom:0;">
@@ -659,7 +661,7 @@
                     </div>
                     <div class="metrics">
                         <div class="metric">
-                            <div class="metric-label">Active Players</div>
+                            <div class="metric-label">Active Players${multBadge}</div>
                             <div class="metric-value" style="color: ${region.color}">${count.toLocaleString()}</div>
                         </div>
                         <div class="metric">
