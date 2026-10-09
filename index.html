@@ -1,10 +1,10 @@
-<!-- BUILD VERSION: v2.0.4 | Last Updated: 2026-10-09 | Fully Server-Driven Curve & Forecast Frontend -->
+<!-- BUILD VERSION: v2.0.5 | Last Updated: 2026-10-09 | HKT Timeline & Regional Tooltip Overlays -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BF6 RedSec - Server-Driven Radar (v2.0.4)</title>
+    <title>BF6 RedSec - Server-Driven Radar (v2.0.5)</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -54,7 +54,7 @@
         .progress-bar { height: 6px; background: #000; border-radius: 3px; overflow: hidden; margin-top: 8px; display: flex; }
         .progress-fill { height: 100%; background: var(--accent); transition: width 0.5s ease-out; }
         .chart-scroll-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 8px; }
-        .chart-container-inner { min-width: 800px; height: 320px; }
+        .chart-container-inner { min-width: 800px; height: 340px; }
         .scroll-hint { font-size: 11px; color: var(--text-muted); text-align: right; margin-bottom: 8px; font-style: italic; }
     </style>
 </head>
@@ -62,8 +62,8 @@
 
 <div class="container">
     <div class="badge-bar">
-        <span class="version-tag">📦 BUILD: v2.0.4</span>
-        <span class="ai-status-badge">✨ Server-Driven Curve Engine Active</span>
+        <span class="version-tag">📦 BUILD: v2.0.5</span>
+        <span class="ai-status-badge">✨ HKT Timeline & Virtual US West Active</span>
     </div>
 
     <div class="header">
@@ -79,12 +79,12 @@
 
     <div class="status-banner">
         <div>
-            <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 4px;">Global Steam Live Baseline (via Proxy)</div>
+            <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 4px;">Global Steam Live Baseline (Proxy)</div>
             <div class="live-count" id="global-steam-count">Connecting...</div>
         </div>
         <div style="text-align: right;">
-            <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 4px;">Data Source & Scope</div>
-            <div style="font-weight: bold;" id="status-mode">Cloudflare Backend Active</div>
+            <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 4px;">Timeline Reference</div>
+            <div style="font-weight: bold;" id="status-mode">Hong Kong Time (HKT)</div>
         </div>
     </div>
 
@@ -93,22 +93,22 @@
     <!-- Proportion Chart -->
     <div class="card">
         <div class="region-header">
-            <h2 class="region-name">24-Hour Regional Share Proportions (Stacked Percentage View)</h2>
+            <h2 class="region-name">24-Hour Regional Share Proportions (HKT Timeline)</h2>
         </div>
         <div class="scroll-hint">💡 Swipe horizontally to view all 24 hours</div>
         <div class="chart-scroll-wrapper"><div class="chart-container-inner"><canvas id="proportionChart"></canvas></div></div>
     </div>
 
-    <!-- Traffic Forecast Chart with All BF6 / RedSec Toggle -->
+    <!-- Traffic Forecast Chart with All BF6 / RedSec Toggle & Tooltips -->
     <div class="card" style="margin-top: 24px;">
         <div class="region-header">
-            <h2 class="region-name">24-Hour Future Forecast (Current Time → +23h Future)</h2>
+            <h2 class="region-name">24-Hour Future Forecast (HKT Timeline → +23h Future)</h2>
             <div class="btn-group">
                 <button id="btn-view-all" class="active" onclick="setChartView('all')">🎮 All BF6</button>
                 <button id="btn-view-redsec" onclick="setChartView('redsec')">🔴 RedSec Only</button>
             </div>
         </div>
-        <div class="scroll-hint">💡 Swipe horizontally to view all 24 hours</div>
+        <div class="scroll-hint">💡 Hover over lines to view regional local time & player counts</div>
         <div class="chart-scroll-wrapper"><div class="chart-container-inner"><canvas id="trafficChart"></canvas></div></div>
     </div>
 </div>
@@ -128,7 +128,7 @@
         { id: "singapore", name: "SEA (Singapore)", ping: 35, color: "#4ade80", baseShare: 0.16 },
         { id: "tokyo", name: "Japan (Tokyo)", ping: 55, color: "#f472b6", baseShare: 0.20 },
         { id: "sydney", name: "OCE (Sydney)", ping: 145, color: "#fbbf24", baseShare: 0.10 },
-        { id: "uswest", name: "US West (Oregon)", ping: 165, color: "#a78bfa", baseShare: 0.22 },
+        { id: "uswest", name: "US West (Virtual)", ping: 165, color: "#a78bfa", baseShare: 0.22 },
         { id: "other", name: "Other Regions", ping: 210, color: "#94a3b8", baseShare: 0.14 }
     ];
 
@@ -166,19 +166,17 @@
         const container = document.getElementById('region-cards');
         container.innerHTML = '';
 
-        // Current hour is the first item in the server's generated forecast array
         const currentSlot = (forecastData && forecastData.length > 0) ? forecastData[0].regions : null;
 
         REGION_METADATA.forEach(region => {
-            const regInfo = currentSlot ? currentSlot[region.id] : { activePlayers: 0, redSecPlayers: 0, localHour: 0, multiplier: 1.0 };
-            const localTimeStr = `${String(regInfo.localHour).padStart(2, '0')}:00`;
+            const regInfo = currentSlot ? currentSlot[region.id] : { activePlayers: 0, redSecPlayers: 0, localTimeString: "00:00", multiplier: 1.0 };
 
             container.innerHTML += `
                 <div class="card" style="margin-bottom:0;">
                     <div class="region-header">
                         <div>
                             <h3 class="region-name">${region.name}</h3>
-                            <div class="region-time">Local Time: ${localTimeStr}</div>
+                            <div class="region-time">Local Time: ${regInfo.localTimeString}</div>
                         </div>
                     </div>
                     <div style="display:flex; gap:8px; align-items:center; margin-bottom:16px;">
@@ -205,9 +203,9 @@
     function renderCharts() {
         if (!forecastData || forecastData.length === 0) return;
 
-        const labels = forecastData.map(f => f.hour);
+        const labels = forecastData.map(f => f.hour); // HKT Timeline labels
 
-        // 1. Proportion Chart (Stacked Percentage Bar Chart)
+        // 1. Proportion Chart
         const propDatasets = REGION_METADATA.map(region => {
             const data = forecastData.map(slot => {
                 const reg = slot.regions[region.id];
@@ -232,13 +230,22 @@
             }
         });
 
-        // 2. Traffic Forecast Chart (Line Chart with Toggle)
+        // 2. Traffic Forecast Chart with Custom Regional Tooltips
         const trafficDatasets = REGION_METADATA.map(region => {
             const data = forecastData.map(slot => {
                 const reg = slot.regions[region.id];
                 return chartViewMode === 'redsec' ? reg.redSecPlayers : reg.activePlayers;
             });
-            return { label: region.name, data, borderColor: region.color, backgroundColor: region.color + '20', borderWidth: 2, tension: 0.4, fill: true };
+            return { 
+                regionId: region.id,
+                label: region.name, 
+                data, 
+                borderColor: region.color, 
+                backgroundColor: region.color + '20', 
+                borderWidth: 2, 
+                tension: 0.4, 
+                fill: true 
+            };
         });
 
         if (trafficChartInstance) trafficChartInstance.destroy();
@@ -248,6 +255,22 @@
             options: { 
                 responsive: true, 
                 maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            title: (tooltipItems) => `Timeline HKT: ${tooltipItems[0].label}`,
+                            label: (context) => {
+                                const datasetIndex = context.datasetIndex;
+                                const dataIndex = context.dataIndex;
+                                const regionId = trafficDatasets[datasetIndex].regionId;
+                                const slot = forecastData[dataIndex];
+                                const regInfo = slot.regions[regionId];
+                                const countLabel = context.parsed.y.toLocaleString();
+                                return ` ${context.dataset.label}: ${countLabel} players (Local Time: ${regInfo.localTimeString})`;
+                            }
+                        }
+                    }
+                },
                 scales: {
                     y: { ticks: { callback: (val) => val.toLocaleString() } }
                 }
