@@ -1,10 +1,10 @@
-<!-- BUILD VERSION: v2.0.1 | Last Updated: 2026-10-09 | Server-Driven Charts Restored -->
+<!-- BUILD VERSION: v2.0.4 | Last Updated: 2026-10-09 | Fully Server-Driven Curve & Forecast Frontend -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BF6 RedSec - Server-Driven Radar (v2.0.1)</title>
+    <title>BF6 RedSec - Server-Driven Radar (v2.0.4)</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -43,7 +43,7 @@
         .status-banner .live-count { font-size: 20px; font-weight: bold; }
         .card { background: var(--card-bg); border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); border: 1px solid var(--border); margin-bottom: 24px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 32px; }
-        .region-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+        .region-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
         .region-name { font-size: 18px; font-weight: bold; margin: 0; }
         .region-time { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
         .badge { background: var(--border); padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
@@ -62,8 +62,8 @@
 
 <div class="container">
     <div class="badge-bar">
-        <span class="version-tag">📦 BUILD: v2.0.1</span>
-        <span class="ai-status-badge">✨ Cloudflare D1 Server-Driven</span>
+        <span class="version-tag">📦 BUILD: v2.0.4</span>
+        <span class="ai-status-badge">✨ Server-Driven Curve Engine Active</span>
     </div>
 
     <div class="header">
@@ -79,26 +79,35 @@
 
     <div class="status-banner">
         <div>
-            <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 4px;">Global Steam Baseline</div>
-            <div class="live-count" id="global-steam-count">Loading...</div>
+            <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 4px;">Global Steam Live Baseline (via Proxy)</div>
+            <div class="live-count" id="global-steam-count">Connecting...</div>
         </div>
         <div style="text-align: right;">
             <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 4px;">Data Source & Scope</div>
-            <div style="font-weight: bold;" id="status-mode">Cloudflare Server Active</div>
+            <div style="font-weight: bold;" id="status-mode">Cloudflare Backend Active</div>
         </div>
     </div>
 
     <div class="grid" id="region-cards"></div>
 
-    <!-- Restored Charts Section -->
+    <!-- Proportion Chart -->
     <div class="card">
-        <div class="region-header"><h2 class="region-name">24-Hour Regional Share Proportions (Stacked Percentage View)</h2></div>
+        <div class="region-header">
+            <h2 class="region-name">24-Hour Regional Share Proportions (Stacked Percentage View)</h2>
+        </div>
         <div class="scroll-hint">💡 Swipe horizontally to view all 24 hours</div>
         <div class="chart-scroll-wrapper"><div class="chart-container-inner"><canvas id="proportionChart"></canvas></div></div>
     </div>
 
+    <!-- Traffic Forecast Chart with All BF6 / RedSec Toggle -->
     <div class="card" style="margin-top: 24px;">
-        <div class="region-header"><h2 class="region-name">24-Hour Future Forecast (Current Time → +23h Future)</h2></div>
+        <div class="region-header">
+            <h2 class="region-name">24-Hour Future Forecast (Current Time → +23h Future)</h2>
+            <div class="btn-group">
+                <button id="btn-view-all" class="active" onclick="setChartView('all')">🎮 All BF6</button>
+                <button id="btn-view-redsec" onclick="setChartView('redsec')">🔴 RedSec Only</button>
+            </div>
+        </div>
         <div class="scroll-hint">💡 Swipe horizontally to view all 24 hours</div>
         <div class="chart-scroll-wrapper"><div class="chart-container-inner"><canvas id="trafficChart"></canvas></div></div>
     </div>
@@ -108,18 +117,19 @@
     const BACKEND_URL = "https://bf6-calibration-api.dermotomred.workers.dev/api/forecast";
 
     let globalSteamPlayers = 29500;
-    let serverWeights = {};
+    let forecastData = [];
     let isCrossPlay = false;
+    let chartViewMode = 'all';
     let proportionChartInstance = null;
     let trafficChartInstance = null;
 
-    const BASE_REGIONS = [
-        { id: "hongkong", name: "Hong Kong (Local)", ping: 2, tz: "Asia/Hong_Kong", color: "#38bdf8", baseShare: 0.18 },
-        { id: "singapore", name: "SEA (Singapore)", ping: 35, tz: "Asia/Singapore", color: "#4ade80", baseShare: 0.16 },
-        { id: "tokyo", name: "Japan (Tokyo)", ping: 55, tz: "Asia/Tokyo", color: "#f472b6", baseShare: 0.20 },
-        { id: "sydney", name: "OCE (Sydney)", ping: 145, tz: "Australia/Sydney", color: "#fbbf24", baseShare: 0.10 },
-        { id: "uswest", name: "US West (Oregon)", ping: 165, tz: "America/Los_Angeles", color: "#a78bfa", baseShare: 0.22 },
-        { id: "other", name: "Other Regions", ping: 210, tz: "Europe/London", color: "#94a3b8", baseShare: 0.14 }
+    const REGION_METADATA = [
+        { id: "hongkong", name: "Hong Kong (Local)", ping: 2, color: "#38bdf8", baseShare: 0.18 },
+        { id: "singapore", name: "SEA (Singapore)", ping: 35, color: "#4ade80", baseShare: 0.16 },
+        { id: "tokyo", name: "Japan (Tokyo)", ping: 55, color: "#f472b6", baseShare: 0.20 },
+        { id: "sydney", name: "OCE (Sydney)", ping: 145, color: "#fbbf24", baseShare: 0.10 },
+        { id: "uswest", name: "US West (Oregon)", ping: 165, color: "#a78bfa", baseShare: 0.22 },
+        { id: "other", name: "Other Regions", ping: 210, color: "#94a3b8", baseShare: 0.14 }
     ];
 
     function setPlatformMode(mode) {
@@ -129,16 +139,23 @@
         fetchBackendData();
     }
 
+    function setChartView(view) {
+        chartViewMode = view;
+        document.getElementById('btn-view-all').classList.toggle('active', view === 'all');
+        document.getElementById('btn-view-redsec').classList.toggle('active', view === 'redsec');
+        renderCharts();
+    }
+
     async function fetchBackendData() {
         try {
-            const res = await fetch(`${BACKEND_URL}?steam=29500&crossplay=${isCrossPlay}`);
+            const res = await fetch(`${BACKEND_URL}?crossplay=${isCrossPlay}`);
             const data = await res.json();
             if (data.status === "success") {
                 globalSteamPlayers = data.globalSteam;
-                serverWeights = data.weights || {};
+                forecastData = data.forecast || [];
             }
         } catch (err) {
-            console.warn("Using offline fallback mode");
+            console.warn("Backend fetch failed, using fallback display mode");
         }
         renderDashboard();
         renderCharts();
@@ -149,11 +166,12 @@
         const container = document.getElementById('region-cards');
         container.innerHTML = '';
 
-        BASE_REGIONS.forEach(region => {
-            const weight = serverWeights[region.id] || 1.0;
-            const count = Math.round(globalSteamPlayers * region.baseShare * weight * (isCrossPlay ? 2.5 : 1.0));
-            const redSecCount = Math.max(1, Math.round(count * 0.035));
-            const localTimeStr = new Date().toLocaleTimeString("en-US", { timeZone: region.tz, hour: '2-digit', minute:'2-digit' });
+        // Current hour is the first item in the server's generated forecast array
+        const currentSlot = (forecastData && forecastData.length > 0) ? forecastData[0].regions : null;
+
+        REGION_METADATA.forEach(region => {
+            const regInfo = currentSlot ? currentSlot[region.id] : { activePlayers: 0, redSecPlayers: 0, localHour: 0, multiplier: 1.0 };
+            const localTimeStr = `${String(regInfo.localHour).padStart(2, '0')}:00`;
 
             container.innerHTML += `
                 <div class="card" style="margin-bottom:0;">
@@ -169,15 +187,15 @@
                     <div class="metrics">
                         <div class="metric">
                             <div class="metric-label">Active Players</div>
-                            <div class="metric-value" style="color: ${region.color}">${count.toLocaleString()}</div>
+                            <div class="metric-value" style="color: ${region.color}">${regInfo.activePlayers.toLocaleString()}</div>
                         </div>
                         <div class="metric">
                             <div class="metric-label">RedSec</div>
-                            <div class="metric-value" style="color: #94a3b8;">${redSecCount.toLocaleString()}</div>
+                            <div class="metric-value" style="color: #94a3b8;">${regInfo.redSecPlayers.toLocaleString()}</div>
                         </div>
                     </div>
                     <div class="progress-bar">
-                        <div class="progress-fill" style="width: 75%; background: ${region.color}"></div>
+                        <div class="progress-fill" style="width: ${Math.min(100, Math.round(regInfo.multiplier * 50))}%; background: ${region.color}"></div>
                     </div>
                 </div>
             `;
@@ -185,22 +203,23 @@
     }
 
     function renderCharts() {
-        const currentHour = new Date().getHours();
-        const labels = [];
-        for (let i = 0; i < 24; i++) {
-            let h = (currentHour + i) % 24;
-            labels.push(`${String(h).padStart(2, '0')}:00`);
-        }
+        if (!forecastData || forecastData.length === 0) return;
 
-        // 1. Proportion Chart
-        const propDatasets = BASE_REGIONS.map(region => {
-            const data = labels.map(() => region.baseShare * 100);
+        const labels = forecastData.map(f => f.hour);
+
+        // 1. Proportion Chart (Stacked Percentage Bar Chart)
+        const propDatasets = REGION_METADATA.map(region => {
+            const data = forecastData.map(slot => {
+                const reg = slot.regions[region.id];
+                const totalInSlot = Object.values(slot.regions).reduce((acc, r) => acc + r.activePlayers, 0);
+                if (totalInSlot === 0) return region.baseShare * 100;
+                return (reg.activePlayers / totalInSlot) * 100;
+            });
             return { label: region.name, data, backgroundColor: region.color, borderWidth: 0 };
         });
 
         if (proportionChartInstance) proportionChartInstance.destroy();
-        const ctxProp = document.getElementById('proportionChart').getContext('2d');
-        proportionChartInstance = new Chart(ctxProp, {
+        proportionChartInstance = new Chart(document.getElementById('proportionChart').getContext('2d'), {
             type: 'bar',
             data: { labels, datasets: propDatasets },
             options: {
@@ -213,19 +232,26 @@
             }
         });
 
-        // 2. Traffic Forecast Chart
-        const trafficDatasets = BASE_REGIONS.map(region => {
-            const weight = serverWeights[region.id] || 1.0;
-            const data = labels.map(() => Math.round(globalSteamPlayers * region.baseShare * weight * (isCrossPlay ? 2.5 : 1.0)));
+        // 2. Traffic Forecast Chart (Line Chart with Toggle)
+        const trafficDatasets = REGION_METADATA.map(region => {
+            const data = forecastData.map(slot => {
+                const reg = slot.regions[region.id];
+                return chartViewMode === 'redsec' ? reg.redSecPlayers : reg.activePlayers;
+            });
             return { label: region.name, data, borderColor: region.color, backgroundColor: region.color + '20', borderWidth: 2, tension: 0.4, fill: true };
         });
 
         if (trafficChartInstance) trafficChartInstance.destroy();
-        const ctxTraffic = document.getElementById('trafficChart').getContext('2d');
-        trafficChartInstance = new Chart(ctxTraffic, {
+        trafficChartInstance = new Chart(document.getElementById('trafficChart').getContext('2d'), {
             type: 'line',
             data: { labels, datasets: trafficDatasets },
-            options: { responsive: true, maintainAspectRatio: false }
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false,
+                scales: {
+                    y: { ticks: { callback: (val) => val.toLocaleString() } }
+                }
+            }
         });
     }
 
