@@ -1,10 +1,10 @@
-<!-- BUILD VERSION: v2.0.8 | Last Updated: 2026-10-09 | Safe Client Parsing & Fallbacks -->
+<!-- BUILD VERSION: v2.0.9 | Last Updated: 2026-10-09 | Fixed Refresh & Regional RedSec Share -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BF6 RedSec - Server-Driven Radar (v2.0.8)</title>
+    <title>BF6 RedSec - Server-Driven Radar (v2.0.9)</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -37,8 +37,9 @@
         .btn-group { display: flex; background: #000; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
         .btn-group button { background: transparent; color: var(--text-muted); border: none; padding: 8px 16px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 13px; }
         .btn-group button.active { background: var(--accent); color: #000; }
-        .refresh-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; }
+        .refresh-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text-main); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.2s; }
         .refresh-btn:hover { background: var(--border); }
+        .refresh-btn:active { background: var(--accent); color: #000; }
         .status-banner { background: linear-gradient(90deg, rgba(56, 189, 248, 0.1) 0%, rgba(30, 41, 59, 0) 100%); border-left: 4px solid var(--accent); padding: 16px; border-radius: 4px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
         .status-banner .live-count { font-size: 20px; font-weight: bold; }
         .card { background: var(--card-bg); border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); border: 1px solid var(--border); margin-bottom: 24px; }
@@ -63,8 +64,8 @@
 
 <div class="container">
     <div class="badge-bar">
-        <span class="version-tag">📦 BUILD: v2.0.8</span>
-        <span class="ai-status-badge">✨ Unified Backend Active</span>
+        <span class="version-tag">📦 BUILD: v2.0.9</span>
+        <span class="ai-status-badge">✨ Regional RedSec Calibration Active</span>
     </div>
 
     <div class="header">
@@ -74,7 +75,7 @@
                 <button id="btn-pc" class="active" onclick="setPlatformMode('pc')">💻 PC Only</button>
                 <button id="btn-cross" onclick="setPlatformMode('crossplay')">🌐 Cross-Play</button>
             </div>
-            <button class="refresh-btn" onclick="fetchBackendData()">↻ Refresh</button>
+            <button class="refresh-btn" id="refresh-btn" onclick="triggerRefresh()">↻ Refresh</button>
         </div>
     </div>
 
@@ -147,6 +148,15 @@
         renderCharts();
     }
 
+    async function triggerRefresh() {
+        const btn = document.getElementById('refresh-btn');
+        btn.innerText = "↻ Fetching...";
+        btn.style.opacity = "0.7";
+        await fetchBackendData();
+        btn.innerText = "↻ Refresh";
+        btn.style.opacity = "1.0";
+    }
+
     async function fetchBackendData() {
         try {
             const res = await fetch(`${BACKEND_URL}?crossplay=${isCrossPlay}`);
@@ -154,11 +164,9 @@
             if (data && data.status === "success") {
                 globalSteamPlayers = data.globalSteam || 19075;
                 forecastData = data.forecast || [];
-            } else {
-                console.warn("API returned non-success structure:", data);
             }
         } catch (err) {
-            console.error("Backend fetch failed completely:", err);
+            console.error("Backend fetch failed:", err);
         }
         renderDashboard();
         renderCharts();
