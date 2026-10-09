@@ -1,4 +1,4 @@
-<!-- BUILD VERSION: v2.0.9 | Last Updated: 2026-10-09 | Fixed Refresh & Regional RedSec Share -->
+<!-- BUILD VERSION: v2.0.9 | Last Updated: 2026-10-09 | Fixed Refresh, Regional RedSec Share & Action Polling -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -15,22 +15,20 @@
             --accent: #38bdf8;
             --success: #4ade80;
             --warning: #fbbf24;
+            --danger: #f87171;
             --border: #334155;
         }
 
-        body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            margin: 0;
-            padding: 24px;
-            line-height: 1.5;
-        }
-
+        body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 24px; line-height: 1.5; }
         .container { max-width: 1200px; margin: 0 auto; }
         .badge-bar { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
         .version-tag { background: rgba(56, 189, 248, 0.15); color: var(--accent); border: 1px solid rgba(56, 189, 248, 0.3); padding: 4px 10px; border-radius: 4px; font-size: 11px; font-family: monospace; font-weight: bold; }
         .ai-status-badge { background: rgba(74, 222, 128, 0.15); color: var(--success); border: 1px solid rgba(74, 222, 128, 0.3); padding: 4px 10px; border-radius: 4px; font-size: 11px; font-family: monospace; font-weight: bold; display: flex; align-items: center; gap: 6px; }
+        
+        /* New AI Action Event Banner Styling */
+        .event-banner { background: rgba(248, 113, 113, 0.15); border: 1px solid rgba(248, 113, 113, 0.3); color: var(--danger); padding: 12px 16px; border-radius: 6px; margin-bottom: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; gap: 8px; box-shadow: 0 2px 12px rgba(248, 113, 113, 0.1); }
+        .event-banner .highlight { color: #fff; background: rgba(248, 113, 113, 0.3); padding: 2px 8px; border-radius: 4px; }
+
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
         .header h1 { margin: 0; font-size: 24px; color: var(--accent); }
         .controls { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
@@ -79,6 +77,11 @@
         </div>
     </div>
 
+    <!-- Active Global Event Banner -->
+    <div id="live-event-banner" class="event-banner" style="display: none;">
+        🔥 <span id="event-name" class="highlight"></span> is Live Globally! Traffic Boosting Multiplier Active: <span id="event-multiplier" class="highlight"></span>x
+    </div>
+
     <div class="status-banner">
         <div>
             <div style="color: var(--text-muted); font-size: 14px; margin-bottom: 4px;">Global Steam Live Baseline (Direct API)</div>
@@ -110,7 +113,7 @@
                 <button id="btn-view-redsec" onclick="setChartView('redsec')">🔴 RedSec Only</button>
             </div>
         </div>
-        <div class="scroll-hint">💡 Hover over lines to view regional local time, player counts & holiday status</div>
+        <div class="scroll-hint">💡 Hover over lines to view regional local time, player counts & holiday/event status</div>
         <div class="chart-scroll-wrapper"><div class="chart-container-inner"><canvas id="trafficChart"></canvas></div></div>
     </div>
 </div>
@@ -164,6 +167,16 @@
             if (data && data.status === "success") {
                 globalSteamPlayers = data.globalSteam || 19075;
                 forecastData = data.forecast || [];
+                
+                // Toggle AI Scraped Event Banner
+                const eventBanner = document.getElementById('live-event-banner');
+                if (data.activeEvent && data.activeEvent.event_active === 1) {
+                    document.getElementById('event-name').innerText = data.activeEvent.event_type;
+                    document.getElementById('event-multiplier').innerText = data.activeEvent.multiplier;
+                    eventBanner.style.display = 'flex';
+                } else {
+                    eventBanner.style.display = 'none';
+                }
             }
         } catch (err) {
             console.error("Backend fetch failed:", err);
@@ -182,7 +195,7 @@
         REGION_METADATA.forEach(region => {
             const regInfo = currentSlot && currentSlot[region.id] ? currentSlot[region.id] : { activePlayers: 0, redSecPlayers: 0, localTimeString: "00:00", multiplier: 1.0, eventLabel: null };
 
-            const holidayBadge = regInfo.eventLabel ? `<span class="badge holiday">🎉 ${regInfo.eventLabel}</span>` : '';
+            const holidayBadge = regInfo.eventLabel ? `<span class="badge holiday">✨ ${regInfo.eventLabel}</span>` : '';
 
             container.innerHTML += `
                 <div class="card" style="margin-bottom:0;">
@@ -293,6 +306,8 @@
     }
 
     fetchBackendData();
+    // Auto-update every 2 minutes matching cache constraints
+    setInterval(fetchBackendData, 120000); 
 </script>
 
 </body>
