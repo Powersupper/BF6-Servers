@@ -1,10 +1,10 @@
-<!-- BUILD VERSION: v2.0.7 | Last Updated: 2026-10-09 | Holiday & Holiday Eve Engine -->
+<!-- BUILD VERSION: v2.0.8 | Last Updated: 2026-10-09 | Safe Client Parsing & Fallbacks -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BF6 RedSec - Server-Driven Radar (v2.0.7)</title>
+    <title>BF6 RedSec - Server-Driven Radar (v2.0.8)</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -63,8 +63,8 @@
 
 <div class="container">
     <div class="badge-bar">
-        <span class="version-tag">📦 BUILD: v2.0.7</span>
-        <span class="ai-status-badge">✨ Holiday & Holiday Eve Engine Active</span>
+        <span class="version-tag">📦 BUILD: v2.0.8</span>
+        <span class="ai-status-badge">✨ Unified Backend Active</span>
     </div>
 
     <div class="header">
@@ -117,7 +117,7 @@
 <script>
     const BACKEND_URL = "https://bf6-calibration-api.dermotomred.workers.dev/api/forecast";
 
-    let globalSteamPlayers = 29500;
+    let globalSteamPlayers = 19075;
     let forecastData = [];
     let isCrossPlay = false;
     let chartViewMode = 'all';
@@ -151,12 +151,14 @@
         try {
             const res = await fetch(`${BACKEND_URL}?crossplay=${isCrossPlay}`);
             const data = await res.json();
-            if (data.status === "success") {
-                globalSteamPlayers = data.globalSteam;
+            if (data && data.status === "success") {
+                globalSteamPlayers = data.globalSteam || 19075;
                 forecastData = data.forecast || [];
+            } else {
+                console.warn("API returned non-success structure:", data);
             }
         } catch (err) {
-            console.warn("Backend fetch failed, using fallback display mode");
+            console.error("Backend fetch failed completely:", err);
         }
         renderDashboard();
         renderCharts();
@@ -170,7 +172,7 @@
         const currentSlot = (forecastData && forecastData.length > 0) ? forecastData[0].regions : null;
 
         REGION_METADATA.forEach(region => {
-            const regInfo = currentSlot ? currentSlot[region.id] : { activePlayers: 0, redSecPlayers: 0, localTimeString: "00:00", multiplier: 1.0, eventLabel: null };
+            const regInfo = currentSlot && currentSlot[region.id] ? currentSlot[region.id] : { activePlayers: 0, redSecPlayers: 0, localTimeString: "00:00", multiplier: 1.0, eventLabel: null };
 
             const holidayBadge = regInfo.eventLabel ? `<span class="badge holiday">🎉 ${regInfo.eventLabel}</span>` : '';
 
@@ -196,7 +198,7 @@
                         </div>
                     </div>
                     <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${Math.min(100, Math.round(regInfo.multiplier * 45))}%; background: ${region.color}"></div>
+                        <div class="progress-fill" style="width: ${Math.min(100, Math.round((regInfo.multiplier || 1.0) * 45))}%; background: ${region.color}"></div>
                     </div>
                 </div>
             `;
@@ -206,13 +208,13 @@
     function renderCharts() {
         if (!forecastData || forecastData.length === 0) return;
 
-        const labels = forecastData.map(f => f.hour); // HKT Timeline labels
+        const labels = forecastData.map(f => f.hour);
 
         // 1. Proportion Chart
         const propDatasets = REGION_METADATA.map(region => {
             const data = forecastData.map(slot => {
-                const reg = slot.regions[region.id];
-                const totalInSlot = Object.values(slot.regions).reduce((acc, r) => acc + r.activePlayers, 0);
+                const reg = slot.regions[region.id] || { activePlayers: 0 };
+                const totalInSlot = Object.values(slot.regions).reduce((acc, r) => acc + (r.activePlayers || 0), 0);
                 if (totalInSlot === 0) return region.baseShare * 100;
                 return (reg.activePlayers / totalInSlot) * 100;
             });
@@ -233,10 +235,10 @@
             }
         });
 
-        // 2. Traffic Forecast Chart with Holiday & Regional Tooltips
+        // 2. Traffic Forecast Chart
         const trafficDatasets = REGION_METADATA.map(region => {
             const data = forecastData.map(slot => {
-                const reg = slot.regions[region.id];
+                const reg = slot.regions[region.id] || { activePlayers: 0, redSecPlayers: 0 };
                 return chartViewMode === 'redsec' ? reg.redSecPlayers : reg.activePlayers;
             });
             return { 
@@ -267,10 +269,10 @@
                                 const dataIndex = context.dataIndex;
                                 const regionId = trafficDatasets[datasetIndex].regionId;
                                 const slot = forecastData[dataIndex];
-                                const regInfo = slot.regions[regionId];
+                                const regInfo = slot.regions[regionId] || {};
                                 const countLabel = context.parsed.y.toLocaleString();
                                 const eventSuffix = regInfo.eventLabel ? ` [${regInfo.eventLabel}]` : '';
-                                return ` ${context.dataset.label}: ${countLabel} players (Local: ${regInfo.localTimeString})${eventSuffix}`;
+                                return ` ${context.dataset.label}: ${countLabel} players (Local: ${regInfo.localTimeString || '00:00'})${eventSuffix}`;
                             }
                         }
                     }
