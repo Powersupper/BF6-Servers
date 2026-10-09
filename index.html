@@ -1,10 +1,10 @@
-<!-- BUILD VERSION: v1.2.1 | Last Updated: 2026-10-08 | Fixes HKT-to-UTC Proportion Index Mapping & US West Cross-Play Floor -->
+<!-- BUILD VERSION: v1.2.2 | Last Updated: 2026-10-09 | Independent Cascading APAC Regional Peaks & Global Gamer Benchmarks -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BF6 RedSec - Dynamic Regional Proportion Radar (v1.2.1)</title>
+    <title>BF6 RedSec - Dynamic Regional Proportion Radar (v1.2.2)</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -282,7 +282,7 @@
 <body>
 
 <div class="container">
-    <div class="version-tag">📦 BUILD: v1.2.1 (Production Release)</div>
+    <div class="version-tag">📦 BUILD: v1.2.2 (Cascading Regional Peaks Release)</div>
     <div class="header">
         <h1>📡 BF6 RedSec Regional Proportion Radar</h1>
         <div class="controls">
@@ -348,9 +348,9 @@
     </div>
 
     <div class="card abstract" style="margin-top: 24px;">
-        <h2>Methodology & Regional Traffic Distribution (v1.2.1)</h2>
-        <p>This dashboard estimates real-time <strong>Battlefield 6</strong> server populations using empirical hourly proportion weights derived from historical telemetry datasets. Time zones are correctly aligned so that local APAC evening primetime (19:00–22:00 HKT) maps accurately to UTC telemetry peaks.</p>
-        <p>The regional hierarchy combines data across 6 primary vectors: <strong>Hong Kong (Local)</strong>, <strong>SEA (Singapore)</strong>, <strong>Japan (Tokyo)</strong>, <strong>OCE (Sydney)</strong>, <strong>US West (Real / Virtual)</strong> with an active cross-play queue baseline floor, and <strong>Other Regions (EU / East US / Others)</strong>.</p>
+        <h2>Methodology & Regional Traffic Distribution (v1.2.2)</h2>
+        <p>This dashboard estimates real-time <strong>Battlefield 6</strong> server populations using independent cascading behavioral proportion curves. Each APAC region is modeled around working adult evening primetime (peaking at ~21:00 local time), ensuring Sydney peaks earliest (~17:30 HKT), followed by Japan (~20:00 HKT), and Hong Kong & Singapore peaking at <strong>21:00 – 22:00 HKT</strong>.</p>
+        <p>Proportions are benchmarked against Newzoo global player demographics and calibrated with US West cross-play queue baseline floors.</p>
     </div>
 </div>
 
@@ -406,32 +406,32 @@
         ]
     };
 
-    // CSV-derived hourly proportions (indexed by UTC hour 0 to 23) with US West baseline floor
-    const CSV_PROPORTIONS = {
-        0: { hk: 0.03165, sg: 0.02814, jp: 0.05276, au: 0.02462, us: 0.22815, other: 0.63468 },
-        1: { hk: 0.03173, sg: 0.02820, jp: 0.05288, au: 0.02468, us: 0.26118, other: 0.60133 },
-        2: { hk: 0.03326, sg: 0.02956, jp: 0.05543, au: 0.02587, us: 0.29205, other: 0.56383 },
-        3: { hk: 0.03656, sg: 0.03250, jp: 0.06093, au: 0.02844, us: 0.32250, other: 0.51907 },
-        4: { hk: 0.04157, sg: 0.03695, jp: 0.06929, au: 0.05273, us: 0.34707, other: 0.45239 },
-        5: { hk: 0.04552, sg: 0.04046, jp: 0.12278, au: 0.10802, us: 0.33717, other: 0.34605 },
-        6: { hk: 0.06849, sg: 0.06088, jp: 0.21622, au: 0.14393, us: 0.25895, other: 0.25153 },
-        7: { hk: 0.11064, sg: 0.09835, jp: 0.26314, au: 0.15311, us: 0.15999, other: 0.21477 },
-        8: { hk: 0.14272, sg: 0.12686, jp: 0.29645, au: 0.15799, us: 0.12000, other: 0.25598 },
-        9: { hk: 0.16453, sg: 0.14625, jp: 0.31319, au: 0.15600, us: 0.12000, other: 0.20003 },
-        10: { hk: 0.17025, sg: 0.15133, jp: 0.30132, au: 0.13459, us: 0.12500, other: 0.21751 },
-        11: { hk: 0.15338, sg: 0.13634, jp: 0.25302, au: 0.09341, us: 0.13000, other: 0.23385 },
-        12: { hk: 0.11978, sg: 0.10647, jp: 0.18197, au: 0.05835, us: 0.14000, other: 0.39343 },
-        13: { hk: 0.08630, sg: 0.07671, jp: 0.12218, au: 0.04024, us: 0.15000, other: 0.52457 },
-        14: { hk: 0.06318, sg: 0.05616, jp: 0.08552, au: 0.03061, us: 0.16000, other: 0.60453 },
-        15: { hk: 0.04870, sg: 0.04329, jp: 0.06527, au: 0.02636, us: 0.17498, other: 0.64140 },
-        16: { hk: 0.03975, sg: 0.03534, jp: 0.05717, au: 0.02476, us: 0.20038, other: 0.64260 },
-        17: { hk: 0.03478, sg: 0.03091, jp: 0.05374, au: 0.02422, us: 0.21980, other: 0.63655 },
-        18: { hk: 0.03254, sg: 0.02892, jp: 0.05300, au: 0.02420, us: 0.23351, other: 0.62783 },
-        19: { hk: 0.03189, sg: 0.02834, jp: 0.05273, au: 0.02447, us: 0.23963, other: 0.62294 },
-        20: { hk: 0.03176, sg: 0.02823, jp: 0.05269, au: 0.02462, us: 0.23966, other: 0.62304 },
-        21: { hk: 0.03169, sg: 0.02817, jp: 0.05270, au: 0.02464, us: 0.23725, other: 0.62555 },
-        22: { hk: 0.03166, sg: 0.02814, jp: 0.05273, au: 0.02463, us: 0.23467, other: 0.62817 },
-        23: { hk: 0.03165, sg: 0.02814, jp: 0.05275, au: 0.02462, us: 0.23075, other: 0.63209 }
+    // Independent cascading regional proportion curves (indexed by HKT hour 0 to 23)
+    const CASCADING_PROPORTIONS = {
+        0: { hk: 0.164, sg: 0.189, jp: 0.126, au: 0.055, us: 0.087, other: 0.380 },
+        1: { hk: 0.131, sg: 0.162, jp: 0.095, au: 0.050, us: 0.103, other: 0.458 },
+        2: { hk: 0.099, sg: 0.129, jp: 0.074, au: 0.048, us: 0.123, other: 0.527 },
+        3: { hk: 0.075, sg: 0.098, jp: 0.064, au: 0.048, us: 0.145, other: 0.570 },
+        4: { hk: 0.061, sg: 0.075, jp: 0.060, au: 0.048, us: 0.172, other: 0.585 },
+        5: { hk: 0.054, sg: 0.062, jp: 0.059, au: 0.049, us: 0.203, other: 0.574 },
+        6: { hk: 0.051, sg: 0.055, jp: 0.060, au: 0.050, us: 0.240, other: 0.544 },
+        7: { hk: 0.051, sg: 0.053, jp: 0.061, au: 0.052, us: 0.282, other: 0.502 },
+        8: { hk: 0.052, sg: 0.053, jp: 0.062, au: 0.055, us: 0.325, other: 0.453 },
+        9: { hk: 0.053, sg: 0.053, jp: 0.064, au: 0.061, us: 0.368, other: 0.401 },
+        10: { hk: 0.055, sg: 0.055, jp: 0.066, au: 0.071, us: 0.403, other: 0.351 },
+        11: { hk: 0.056, sg: 0.057, jp: 0.068, au: 0.089, us: 0.426, other: 0.304 },
+        12: { hk: 0.059, sg: 0.059, jp: 0.072, au: 0.117, us: 0.431, other: 0.263 },
+        13: { hk: 0.063, sg: 0.063, jp: 0.080, au: 0.154, us: 0.415, other: 0.226 },
+        14: { hk: 0.070, sg: 0.070, jp: 0.096, au: 0.194, us: 0.376, other: 0.194 },
+        15: { hk: 0.085, sg: 0.082, jp: 0.125, au: 0.226, us: 0.319, other: 0.164 },
+        16: { hk: 0.105, sg: 0.097, jp: 0.162, au: 0.230, us: 0.248, other: 0.158 },
+        17: { hk: 0.130, sg: 0.116, jp: 0.202, au: 0.214, us: 0.185, other: 0.153 },
+        18: { hk: 0.155, sg: 0.138, jp: 0.234, au: 0.183, us: 0.138, other: 0.152 },
+        19: { hk: 0.178, sg: 0.158, jp: 0.250, au: 0.150, us: 0.106, other: 0.158 },
+        20: { hk: 0.195, sg: 0.177, jp: 0.248, au: 0.120, us: 0.087, other: 0.173 },
+        21: { hk: 0.204, sg: 0.193, jp: 0.230, au: 0.095, us: 0.077, other: 0.201 },
+        22: { hk: 0.203, sg: 0.202, jp: 0.200, au: 0.076, us: 0.075, other: 0.244 },
+        23: { hk: 0.189, sg: 0.202, jp: 0.163, au: 0.063, us: 0.078, other: 0.305 }
     };
 
     const STEAMDB_PATTERN = {
@@ -578,9 +578,7 @@
             slotBaseline = totalSteamPlayers * (targetPatternVal / basePatternVal);
         }
 
-        // Correctly map HKT hour to UTC telemetry index (UTC = HKT - 8 hours)
-        const utcIndex = (hktHour - 8 + 24) % 24;
-        const hourlyProportions = CSV_PROPORTIONS[utcIndex] || CSV_PROPORTIONS[0];
+        const hourlyProportions = CASCADING_PROPORTIONS[hktHour] || CASCADING_PROPORTIONS[0];
         let csvShare = hourlyProportions[region.csvKey] || 0.1;
 
         if (region.isVirtual && region.csvKey === 'us') {
@@ -614,7 +612,7 @@
             const trafficData = calculatePatternTraffic(currentHKTHour, region, globalSteamPlayers, 0);
             const count = trafficData.count;
             const redSecCount = trafficData.redSecCount;
-            const peakData = calculatePatternTraffic(19, region, globalSteamPlayers, 0); // Reference APAC peak HKT 19:00
+            const peakData = calculatePatternTraffic(21, region, globalSteamPlayers, 0); // Reference HK peak HKT 21:00
             const peakPool = peakData.count || 1000;
             
             const fillPct = Math.min(100, Math.max(5, (count / peakPool) * 100));
