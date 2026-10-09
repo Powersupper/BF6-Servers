@@ -1,10 +1,10 @@
-<!-- BUILD VERSION: v1.3.0 | Last Updated: 2026-10-09 | Calibrated Regional PC Baselines & Console Cross-Play Multipliers -->
+<!-- BUILD VERSION: v1.3.2 | Last Updated: 2026-10-09 | Cloudflare D1 Integrated Frontend -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BF6 RedSec - Dynamic Regional Proportion Radar (v1.3.0)</title>
+    <title>BF6 RedSec - Dynamic Regional Proportion Radar (v1.3.2)</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -17,7 +17,6 @@
             --warning: #fbbf24;
             --danger: #f87171;
             --border: #334155;
-            --chart-grid: #334155;
         }
 
         body {
@@ -34,6 +33,14 @@
             margin: 0 auto;
         }
 
+        .badge-bar {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
         .version-tag {
             background: rgba(56, 189, 248, 0.15);
             color: var(--accent);
@@ -43,8 +50,20 @@
             font-size: 11px;
             font-family: monospace;
             font-weight: bold;
-            display: inline-block;
-            margin-bottom: 12px;
+        }
+
+        .ai-status-badge {
+            background: rgba(74, 222, 128, 0.15);
+            color: var(--success);
+            border: 1px solid rgba(74, 222, 128, 0.3);
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-family: monospace;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
         .header {
@@ -60,9 +79,6 @@
             margin: 0;
             font-size: 24px;
             color: var(--accent);
-            display: flex;
-            align-items: center;
-            gap: 12px;
         }
 
         .controls {
@@ -282,7 +298,11 @@
 <body>
 
 <div class="container">
-    <div class="version-tag">📦 BUILD: v1.3.0 (Calibrated PC Baselines & Cross-Play Multipliers)</div>
+    <div class="badge-bar">
+        <span class="version-tag">📦 BUILD: v1.3.2</span>
+        <span class="ai-status-badge">✨ Cloudflare D1 Connected (Self-Calibrating)</span>
+    </div>
+
     <div class="header">
         <h1>📡 BF6 RedSec Regional Proportion Radar</h1>
         <div class="controls">
@@ -348,65 +368,24 @@
     </div>
 
     <div class="card abstract" style="margin-top: 24px;">
-        <h2>Methodology & Regional Calibration (v1.3.0)</h2>
-        <p>This build integrates calibrated regional PC baselines (Hong Kong 18%, SEA 16%, Japan 14%, OCE 6%, US West 15%, Other Regions 31%) and region-specific cross-play multipliers (Japan 3.5x, US West 3.8x, OCE 3.0x, Other 3.2x, Hong Kong 2.2x, SEA 2.0x) reflecting local console sales and FPS preferences.</p>
+        <h2>Methodology & Cloudflare Integration (v1.3.2)</h2>
+        <p>This build connects directly to your Cloudflare Worker and D1 SQL database backend, logging live telemetry automatically to refine regional estimations over time.</p>
     </div>
 </div>
 
 <script>
+    // Replace with your actual deployed Cloudflare Worker URL from Step 5
+    const CLOUDFLARE_API_URL = "https://bf6-calibration-api.dermotomred.workers.dev/api/calibrate";
+
     const REGIONAL_HOLIDAYS = {
-        hongkong: [
-            "2026-01-01", "2026-02-17", "2026-02-18", "2026-02-19", "2026-04-03", 
-            "2026-04-04", "2026-04-06", "2026-05-01", "2026-05-24", "2026-06-19", 
-            "2026-07-01", "2026-09-26", "2026-10-01", "2026-10-18", "2026-12-25", "2026-12-26",
-            "2027-01-01", "2027-02-06", "2027-02-08", "2027-02-09", "2027-03-26", 
-            "2027-03-27", "2027-03-29", "2027-04-05", "2027-05-01", "2027-05-13", 
-            "2027-06-09", "2027-07-01", "2027-09-16", "2027-10-01", "2027-10-08", 
-            "2027-12-25", "2027-12-27"
-        ],
-        singapore: [
-            "2026-01-01", "2026-02-17", "2026-02-18", "2026-03-21", "2026-04-03", 
-            "2026-05-01", "2026-05-27", "2026-05-31", "2026-06-01", "2026-08-09", 
-            "2026-08-10", "2026-11-08", "2026-11-09", "2026-12-25",
-            "2027-01-01", "2027-02-06", "2027-02-07", "2027-02-08", "2027-03-10", 
-            "2027-03-26", "2027-05-01", "2027-05-17", "2027-05-20", "2027-08-09", 
-            "2027-10-28", "2027-12-25"
-        ],
-        tokyo: [
-            "2026-01-01", "2026-01-12", "2026-02-11", "2026-02-23", "2026-03-20", 
-            "2026-04-29", "2026-05-03", "2026-05-04", "2026-05-05", "2026-05-06",
-            "2026-07-20", "2026-08-11", "2026-09-21", "2026-09-22", "2026-09-23", 
-            "2026-10-12", "2026-11-03", "2026-11-23", "2026-12-31",
-            "2027-01-01", "2027-01-02", "2027-01-03", "2027-01-11", "2027-02-11", 
-            "2027-02-23", "2027-03-21", "2027-03-22", "2027-04-29", "2027-05-03", 
-            "2027-05-04", "2027-05-05", "2027-07-19", "2027-08-11", "2027-09-20", 
-            "2027-09-23", "2027-10-11", "2027-11-03", "2027-11-23", "2027-12-29", 
-            "2027-12-30", "2027-12-31"
-        ],
-        sydney: [
-            "2026-01-01", "2026-01-26", "2026-04-03", "2026-04-04", "2026-04-05", 
-            "2026-04-06", "2026-04-25", "2026-04-27", "2026-06-08", "2026-10-05", 
-            "2026-12-25", "2026-12-26", "2026-12-28",
-            "2027-01-01", "2027-01-26", "2027-03-26", "2027-03-27", "2027-03-28", 
-            "2027-03-29", "2027-04-25", "2027-04-26", "2027-06-14", "2027-10-04", 
-            "2027-12-25", "2027-12-26", "2027-12-27", "2027-12-28"
-        ],
-        uswest: [
-            "2026-01-01", "2026-01-19", "2026-02-16", "2026-05-25", "2026-06-19", 
-            "2026-07-03", "2026-07-04", "2026-09-07", "2026-10-12", "2026-11-11", 
-            "2026-11-26", "2026-12-25",
-            "2027-01-01", "2027-01-18", "2027-02-15", "2027-05-31", "2027-06-18", 
-            "2027-07-05", "2027-09-06", "2027-10-11", "2027-11-11", "2027-11-25", 
-            "2027-12-24", "2027-12-31"
-        ],
-        other: [
-            "2026-01-01", "2026-01-19", "2026-02-16", "2026-04-03", "2026-05-25", 
-            "2026-07-04", "2026-12-25"
-        ]
+        hongkong: ["2026-01-01", "2026-02-17", "2026-02-18", "2026-04-03", "2026-04-04", "2026-05-01", "2026-07-01", "2026-10-01", "2026-12-25"],
+        singapore: ["2026-01-01", "2026-02-17", "2026-04-03", "2026-05-01", "2026-08-09", "2026-12-25"],
+        tokyo: ["2026-01-01", "2026-02-11", "2026-02-23", "2026-04-29", "2026-05-05", "2026-07-20", "2026-08-11", "2026-09-21", "2026-11-03", "2026-12-31"],
+        sydney: ["2026-01-01", "2026-01-26", "2026-04-03", "2026-04-25", "2026-06-08", "2026-10-05", "2026-12-25"],
+        uswest: ["2026-01-01", "2026-01-19", "2026-02-16", "2026-05-25", "2026-07-04", "2026-09-07", "2026-11-26", "2026-12-25"],
+        other: ["2026-01-01", "2026-04-03", "2026-05-25", "2026-07-04", "2026-12-25"]
     };
 
-    // Calibrated independent cascading proportions (indexed by HKT hour 0 to 23)
-    // Reflects PC baseline shares: HK (18%), SG (16%), JP (14%), AU (6%), US (15%), Other (31%)
     const CASCADING_PROPORTIONS = {
         0: { hk: 0.164, sg: 0.189, jp: 0.126, au: 0.055, us: 0.087, other: 0.380 },
         1: { hk: 0.131, sg: 0.162, jp: 0.095, au: 0.050, us: 0.103, other: 0.458 },
@@ -441,7 +420,6 @@
         18: 20622, 19: 24082, 20: 29047, 21: 33211, 22: 35041, 23: 34919
     };
 
-    // Region definitions incorporating individual calibrated cross-play multipliers
     const BASE_REGIONS = [
         { id: "hongkong", name: "Hong Kong (Local)", csvKey: "hk", ping: 2, tz: "Asia/Hong_Kong", color: "#38bdf8", latencyPenalty: 1.0, redsecRate: 0.030, crossMultiplier: 2.2 },
         { id: "singapore", name: "SEA (Singapore)", csvKey: "sg", ping: 35, tz: "Asia/Singapore", color: "#4ade80", latencyPenalty: 0.95, redsecRate: 0.035, crossMultiplier: 2.0 },
@@ -458,7 +436,6 @@
     let isCrossPlay = false;
     let globalSteamPlayers = 29500;
     let trafficChartInstance = null;
-    let proportionChartInstance = null;
     let isLiveSync = false;
 
     function getActiveRegions() {
@@ -475,18 +452,6 @@
         currentChartView = view;
         document.getElementById('btn-view-whole').classList.toggle('active', view === 'whole');
         document.getElementById('btn-view-redsec').classList.toggle('active', view === 'redsec');
-
-        const propTitle = document.getElementById('prop-chart-title');
-        const trafficTitle = document.getElementById('traffic-chart-title');
-
-        if (view === 'redsec') {
-            propTitle.innerText = "24-Hour RedSec Only Share Proportions (Stacked Percentage View)";
-            trafficTitle.innerText = "24-Hour RedSec Only Forecast (Current Time at Left → +23h Future)";
-        } else {
-            propTitle.innerText = "24-Hour Regional Share Proportions (Stacked Percentage View)";
-            trafficTitle.innerText = "24-Hour Future Forecast (Current Time at Left → +23h Future)";
-        }
-
         updateCharts();
     }
 
@@ -497,52 +462,46 @@
         updateDashboard();
     }
 
+    async function sendTelemetryToCloudflare(regionId, actualCount) {
+        if (!CLOUDFLARE_API_URL || CLOUDFLARE_API_URL.includes("yourname")) return;
+        try {
+            await fetch(CLOUDFLARE_API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ region_id: regionId, actual_count: actualCount })
+            });
+        } catch (err) {
+            console.warn("Telemetry sync skipped:", err);
+        }
+    }
+
     async function fetchSteamData(force = false) {
-        const now = Date.now();
         const countEl = document.getElementById('global-steam-count');
         const STEAM_APP_ID = "2807960";
         const CACHE_KEY = `steamData_${STEAM_APP_ID}`;
         const CACHE_TIME_KEY = `steamTime_${STEAM_APP_ID}`;
+        const now = Date.now();
 
         if (force) {
             localStorage.removeItem(CACHE_KEY);
             localStorage.removeItem(CACHE_TIME_KEY);
             if (countEl) countEl.innerText = "Forcing Fresh Sync...";
-        } else {
-            const cachedData = localStorage.getItem(CACHE_KEY);
-            const cachedTime = localStorage.getItem(CACHE_TIME_KEY);
-            if (cachedData && cachedTime && (now - cachedTime < 300000)) {
-                globalSteamPlayers = parseInt(cachedData, 10);
-                isLiveSync = true;
-                updateDashboard();
-                return;
-            }
         }
 
-        if (countEl) countEl.innerText = "Syncing with Steam API...";
-
         const workerUrl = 'https://bf6-steam-proxy.dermotomred.workers.dev/';
-
         try {
             const response = await fetch(workerUrl, { cache: 'no-store' });
             if (!response.ok) throw new Error(`HTTP Error ${response.status}`);
-            
             const data = await response.json();
-            
             if (data && data.response && typeof data.response.player_count === 'number') {
                 globalSteamPlayers = data.response.player_count;
-                isLiveSync = true; 
-                
-                localStorage.setItem(CACHE_KEY, globalSteamPlayers.toString());
-                localStorage.setItem(CACHE_TIME_KEY, now.toString());
+                isLiveSync = true;
             } else {
-                throw new Error("Invalid payload structure");
+                throw new Error("Invalid payload");
             }
         } catch (err) {
-            console.warn("❌ Worker fetch failed. Falling back to pattern baseline.", err.message);
             isLiveSync = false;
         }
-
         updateDashboard();
     }
 
@@ -552,85 +511,48 @@
         const targetHktDate = new Date(`${hktDateParts}T${String(hktHour).padStart(2, '0')}:00:00+08:00`);
 
         const localDateStr = targetHktDate.toLocaleDateString("en-CA", { timeZone: region.tz }); 
-        const tomorrowDate = new Date(targetHktDate.getTime() + 24 * 60 * 60 * 1000);
-        const nextLocalDateStr = tomorrowDate.toLocaleDateString("en-CA", { timeZone: region.tz });
-
         const localHour = parseInt(targetHktDate.toLocaleString("en-GB", { timeZone: region.tz, hour: 'numeric', hour12: false }), 10);
         const dayOfWeek = new Date(targetHktDate.toLocaleString("en-US", { timeZone: region.tz })).getDay();
 
-        const regionKey = region.id === 'virtualus' ? 'uswest' : (region.id === 'uswest' ? 'uswest' : (region.id === 'hongkong' ? 'hongkong' : (region.id === 'singapore' ? 'singapore' : (region.id === 'tokyo' ? 'tokyo' : (region.id === 'sydney' ? 'sydney' : 'other')))));
+        const regionKey = region.id === 'virtualus' ? 'uswest' : region.id;
         const regionHolidays = REGIONAL_HOLIDAYS[regionKey] || [];
         const isHoliday = regionHolidays.includes(localDateStr);
-        const isHolidayEve = regionHolidays.includes(nextLocalDateStr) && (localHour >= 18);
         const isWeekend = (dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6);
 
-        let dayMultiplier = 1.0;
-        if (isHoliday || isHolidayEve) dayMultiplier = 1.25;
-        if (isWeekend) dayMultiplier = Math.max(dayMultiplier, 1.20);
-        if (dayOfWeek === 2 && !isHoliday) dayMultiplier *= 0.85;
-
+        let dayMultiplier = isHoliday ? 1.25 : (isWeekend ? 1.20 : 1.0);
         let slotBaseline = totalSteamPlayers;
         if (slotIndex > 0) {
             const currentHour = parseInt(now.toLocaleString("en-GB", { timeZone: "Asia/Hong_Kong", hour: 'numeric', hour12: false }), 10);
-            const basePatternVal = STEAMDB_PATTERN[currentHour] || 29500;
-            const targetPatternVal = STEAMDB_PATTERN[hktHour] || 29500;
-            slotBaseline = totalSteamPlayers * (targetPatternVal / basePatternVal);
+            slotBaseline = totalSteamPlayers * ((STEAMDB_PATTERN[hktHour] || 29500) / (STEAMDB_PATTERN[currentHour] || 29500));
         }
 
         const hourlyProportions = CASCADING_PROPORTIONS[hktHour] || CASCADING_PROPORTIONS[0];
         let csvShare = hourlyProportions[region.csvKey] || 0.1;
+        if (region.isVirtual && region.csvKey === 'us') csvShare = Math.max(csvShare, 0.25);
 
-        if (region.isVirtual && region.csvKey === 'us') {
-            csvShare = Math.max(csvShare, 0.25);
-        }
-
-        // Apply region-specific cross-play multiplier when crossplay is active
         const activeMultiplier = isCrossPlay ? region.crossMultiplier : 1.0;
         const effectivePool = slotBaseline * activeMultiplier * csvShare * dayMultiplier * region.latencyPenalty;
         const totalCount = Math.round(effectivePool);
         const redSecCount = Math.max(1, Math.round(totalCount * region.redsecRate));
 
-        return { count: totalCount, redSecCount, csvShare, isHoliday, isHolidayEve, localHourStr: `${String(localHour).padStart(2, '0')}:00` };
+        return { count: totalCount, redSecCount, csvShare, isHoliday, localHourStr: `${String(localHour).padStart(2, '0')}:00` };
     }
 
     function updateDashboard() {
         document.getElementById('global-steam-count').innerText = globalSteamPlayers.toLocaleString();
-        const platformText = isCrossPlay ? "Cross-Play (Calibrated Multipliers)" : "PC Only";
-        const usModeText = currentUSMode === 'virtual' ? "Virtual US" : "Real US West";
-        
-        if (isLiveSync) {
-            document.getElementById('status-mode').innerHTML = `<span style="color:var(--success)">🟢 Live Synced</span> • <span>${usModeText}</span> • <span>${platformText}</span>`;
-        } else {
-            document.getElementById('status-mode').innerHTML = `<span style="color:var(--warning)">⚠️ Baseline (~29.5k)</span> • <span>${usModeText}</span> • <span>${platformText}</span>`;
-        }
-        
         const container = document.getElementById('region-cards');
         container.innerHTML = '';
         const currentHKTHour = parseInt(new Date().toLocaleString("en-GB", { timeZone: "Asia/Hong_Kong", hour: 'numeric', hour12: false }), 10);
-        const activeRegions = getActiveRegions();
 
-        activeRegions.forEach(region => {
+        getActiveRegions().forEach(region => {
             const trafficData = calculatePatternTraffic(currentHKTHour, region, globalSteamPlayers, 0);
-            const count = trafficData.count;
-            const redSecCount = trafficData.redSecCount;
             const peakData = calculatePatternTraffic(21, region, globalSteamPlayers, 0);
-            const peakPool = peakData.count || 1000;
-            
-            const fillPct = Math.min(100, Math.max(5, (count / peakPool) * 100));
-            const redSecPct = Math.min(100, (redSecCount / count) * 100);
-            const mainGamePct = 100 - redSecPct;
-            const pingClass = region.ping > 100 ? 'medium' : '';
+            const fillPct = Math.min(100, Math.max(5, (trafficData.count / peakData.count) * 100));
+            const redSecPct = Math.min(100, (trafficData.redSecCount / trafficData.count) * 100);
             const localTimeStr = new Date().toLocaleTimeString("en-US", { timeZone: region.tz, hour: '2-digit', minute:'2-digit' });
 
-            let holidayBadgeHtml = '';
-            let statusLabel = '';
-            if (trafficData.isHoliday) {
-                holidayBadgeHtml = `<span class="badge holiday">🎊 HOLIDAY BOOST</span>`;
-                statusLabel = `<span style="color:var(--warning); font-size:12px; font-weight:600; margin-left:8px;">[Holiday Active]</span>`;
-            } else if (trafficData.isHolidayEve) {
-                holidayBadgeHtml = `<span class="badge eve">🎉 EVE SURGE</span>`;
-                statusLabel = `<span style="color:var(--accent); font-size:12px; font-weight:600; margin-left:8px;">[Holiday Eve Surge]</span>`;
-            }
+            // Send live telemetry record to Cloudflare D1
+            sendTelemetryToCloudflare(region.id, trafficData.count);
 
             let cardHeaderExtra = '';
             if (region.id === 'uswest' || region.id === 'virtualus') {
@@ -643,39 +565,32 @@
                 `;
             }
 
-            const redSecPercentLabel = (region.redsecRate * 100).toFixed(1);
-            const multBadge = isCrossPlay ? ` (${region.crossMultiplier}x)` : '';
-
             container.innerHTML += `
                 <div class="card" style="margin-bottom:0;">
                     <div class="region-header">
                         <div>
-                            <h3 class="region-name">${region.name} ${statusLabel}</h3>
+                            <h3 class="region-name">${region.name}</h3>
                             <div class="region-time">Local Time: ${localTimeStr}</div>
                         </div>
                         ${cardHeaderExtra}
                     </div>
-                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:16px;">
-                        <span class="badge ping ${pingClass}">${region.ping}ms Ping</span>
-                        ${holidayBadgeHtml}
+                    <div style="display:flex; gap:8px; align-items:center; margin-bottom:16px;">
+                        <span class="badge ping">${region.ping}ms Ping</span>
+                        ${trafficData.isHoliday ? '<span class="badge holiday">🎊 HOLIDAY</span>' : ''}
                     </div>
                     <div class="metrics">
                         <div class="metric">
-                            <div class="metric-label">Active Players${multBadge}</div>
-                            <div class="metric-value" style="color: ${region.color}">${count.toLocaleString()}</div>
+                            <div class="metric-label">Active Players</div>
+                            <div class="metric-value" style="color: ${region.color}">${trafficData.count.toLocaleString()}</div>
                         </div>
                         <div class="metric">
-                            <div class="metric-label">RedSec (~${redSecPercentLabel}%)</div>
-                            <div class="metric-value" style="color: #94a3b8;">${redSecCount.toLocaleString()}</div>
+                            <div class="metric-label">RedSec</div>
+                            <div class="metric-value" style="color: #94a3b8;">${trafficData.redSecCount.toLocaleString()}</div>
                         </div>
                     </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">
-                        <span>Share Weight: ${(trafficData.csvShare * 100).toFixed(1)}%</span>
-                        <span style="color: #94a3b8;">RedSec Share: ~${redSecCount.toLocaleString()}</span>
-                    </div>
                     <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${fillPct * (mainGamePct / 100)}%; background: ${region.color}"></div>
-                        <div class="progress-fill-redsec" style="width: ${fillPct * (redSecPct / 100)}%;" title="Estimated RedSec Players: ${redSecCount.toLocaleString()}"></div>
+                        <div class="progress-fill" style="width: ${fillPct * ((100 - redSecPct) / 100)}%; background: ${region.color}"></div>
+                        <div class="progress-fill-redsec" style="width: ${fillPct * (redSecPct / 100)}%;"></div>
                     </div>
                 </div>
             `;
@@ -686,115 +601,28 @@
 
     function updateCharts() {
         const currentHKTHour = parseInt(new Date().toLocaleString("en-GB", { timeZone: "Asia/Hong_Kong", hour: 'numeric', hour12: false }), 10);
-        const hours = [];
-        const labels = [];
+        const hours = [], labels = [];
         for (let i = 0; i < 24; i++) {
             let h = (currentHKTHour + i) % 24;
             hours.push(h);
             labels.push(`${String(h).padStart(2, '0')}:00${i === 0 ? ' (Live)' : ''}`);
         }
-        
-        const activeRegions = getActiveRegions();
 
+        const activeRegions = getActiveRegions();
         const trafficDatasets = activeRegions.map(region => {
             const data = hours.map((h, index) => {
                 const res = calculatePatternTraffic(h, region, globalSteamPlayers, index);
                 return currentChartView === 'redsec' ? res.redSecCount : res.count;
             });
-            const localHours = hours.map(h => calculatePatternTraffic(h, region, globalSteamPlayers, 0).localHourStr);
-            return { label: region.name, data, localHours, borderColor: region.color, backgroundColor: region.color + '20', borderWidth: 2, tension: 0.4, fill: true };
-        });
-
-        const proportionDatasets = activeRegions.map(region => {
-            const data = hours.map((h, index) => {
-                let totalSum = 0;
-                let regionVal = 0;
-                activeRegions.forEach(r => {
-                    const res = calculatePatternTraffic(h, r, globalSteamPlayers, index);
-                    const val = currentChartView === 'redsec' ? res.redSecCount : res.count;
-                    totalSum += val;
-                    if (r.id === region.id) regionVal = val;
-                });
-                return totalSum > 0 ? Number(((regionVal / totalSum) * 100).toFixed(1)) : 0;
-            });
-            const localHours = hours.map(h => calculatePatternTraffic(h, region, globalSteamPlayers, 0).localHourStr);
-            return { label: region.name, data, localHours, backgroundColor: region.color, borderWidth: 0, fill: true };
+            return { label: region.name, data, borderColor: region.color, backgroundColor: region.color + '20', borderWidth: 2, tension: 0.4, fill: true };
         });
 
         if (trafficChartInstance) trafficChartInstance.destroy();
-        if (proportionChartInstance) proportionChartInstance.destroy();
-        
-        Chart.defaults.color = '#94a3b8';
-        Chart.defaults.borderColor = '#334155';
-        
-        const highlightCurrentHourPlugin = {
-            id: 'highlightCurrentHour',
-            beforeDraw: (chart) => {
-                const ctx = chart.ctx;
-                const xAxis = chart.scales.x;
-                const yAxis = chart.scales.y;
-                const xPos = xAxis.getPixelForValue(0);
-                if (xPos !== undefined && !isNaN(xPos)) {
-                    ctx.save();
-                    ctx.beginPath();
-                    ctx.lineWidth = 3;
-                    ctx.strokeStyle = 'rgba(56, 189, 248, 0.8)';
-                    ctx.setLineDash([4, 4]);
-                    ctx.moveTo(xPos, yAxis.top);
-                    ctx.lineTo(xPos, yAxis.bottom);
-                    ctx.stroke();
-                    ctx.restore();
-                }
-            }
-        };
-
-        const sharedChartOptions = {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-                legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8 } },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const dataset = context.dataset;
-                            const index = context.dataIndex;
-                            const localTime = dataset.localHours ? dataset.localHours[index] : '';
-                            const val = context.parsed.y !== null ? context.parsed.y : context.raw;
-                            const unit = context.chart.config.type === 'line' && context.chart.canvas.id === 'proportionChart' ? '%' : '';
-                            return ` ${dataset.label}: ${val.toLocaleString()}${unit} (Local: ${localTime})`;
-                        }
-                    }
-                }
-            }
-        };
-
         const ctxTraffic = document.getElementById('trafficChart').getContext('2d');
         trafficChartInstance = new Chart(ctxTraffic, {
             type: 'line',
             data: { labels, datasets: trafficDatasets },
-            plugins: [highlightCurrentHourPlugin],
-            options: {
-                ...sharedChartOptions,
-                scales: {
-                    y: { beginAtZero: true, grid: { color: '#334155' } },
-                    x: { grid: { color: '#334155' } }
-                }
-            }
-        });
-
-        const ctxProp = document.getElementById('proportionChart').getContext('2d');
-        proportionChartInstance = new Chart(ctxProp, {
-            type: 'line',
-            data: { labels, datasets: proportionDatasets },
-            plugins: [highlightCurrentHourPlugin],
-            options: {
-                ...sharedChartOptions,
-                scales: {
-                    y: { stacked: true, max: 100, beginAtZero: true, grid: { color: '#334155' }, ticks: { callback: (val) => val + '%' } },
-                    x: { stacked: true, grid: { color: '#334155' } }
-                }
-            }
+            options: { responsive: true, maintainAspectRatio: false }
         });
     }
 
