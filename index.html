@@ -116,6 +116,20 @@
         <div class="scroll-hint">💡 Hover over lines to view regional local time, player counts & holiday/event status</div>
         <div class="chart-scroll-wrapper"><div class="chart-container-inner"><canvas id="trafficChart"></canvas></div></div>
     </div>
+
+    <!-- New Scraped Event History Card -->
+    <div class="card" style="margin-top: 24px;">
+        <div class="region-header">
+            <h2 class="region-name">🤖 DeepSeek / GitHub Actions Scraped Event History</h2>
+            <span class="badge" id="history-status-badge" style="background: rgba(74, 222, 128, 0.15); color: var(--success); border: 1px solid rgba(74, 222, 128, 0.3);">Live Sync Active</span>
+        </div>
+        <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+            Displays the latest 3 events crawled and synced to your Cloudflare D1 database. Expired events are automatically crossed out.
+        </div>
+        <div id="event-history-list" style="display: flex; flex-direction: column; gap: 10px;">
+            <div style="color: var(--text-muted); font-style: italic;">Loading crawl history...</div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -176,6 +190,28 @@
                     eventBanner.style.display = 'flex';
                 } else {
                     eventBanner.style.display = 'none';
+                }
+
+                // Render Scraped Event History Card
+                const historyContainer = document.getElementById('event-history-list');
+                if (data.eventHistory && data.eventHistory.length > 0) {
+                    historyContainer.innerHTML = data.eventHistory.map(evt => {
+                        const isActive = evt.event_active === 1;
+                        const textStyle = isActive ? 'font-weight: bold; color: var(--success);' : 'text-decoration: line-through; color: var(--text-muted); opacity: 0.7;';
+                        const badgeHtml = isActive ? '<span class="badge" style="background: rgba(74, 222, 128, 0.15); color: var(--success); border: 1px solid rgba(74, 222, 128, 0.3);">🔥 ACTIVE</span>' : '<span class="badge" style="background: var(--border); color: var(--text-muted);">EXPIRED</span>';
+                        
+                        return `
+                            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 12px 16px; border-radius: 6px; border: 1px solid var(--border);">
+                                <div style="${textStyle}">
+                                    <span style="font-size: 15px;">${evt.event_type || 'Unknown Event'}</span> 
+                                    <span style="font-size: 12px; margin-left: 8px; color: var(--text-muted);">(Multiplier: ${evt.multiplier}x | Window: ${evt.start_date || 'N/A'} to ${evt.end_date || 'N/A'})</span>
+                                </div>
+                                <div>${badgeHtml}</div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    historyContainer.innerHTML = `<div style="color: var(--text-muted);">No crawl entries found in database yet. Trigger your GitHub Action to test!</div>`;
                 }
             }
         } catch (err) {
