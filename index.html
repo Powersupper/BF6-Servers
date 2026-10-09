@@ -1,10 +1,10 @@
-<!-- BUILD VERSION: v1.4.0 | Last Updated: 2026-10-09 | Lightweight Server-Driven Architecture -->
+<!-- BUILD VERSION: v2.0.1 | Last Updated: 2026-10-09 | Server-Driven Charts Restored -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BF6 RedSec - Lightweight Server-Driven Radar (v1.4.0)</title>
+    <title>BF6 RedSec - Server-Driven Radar (v2.0.1)</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -48,19 +48,21 @@
         .region-time { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
         .badge { background: var(--border); padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
         .badge.ping { background: rgba(74, 222, 128, 0.1); color: var(--success); border: 1px solid rgba(74, 222, 128, 0.2); }
-        .badge.holiday { background: var(--warning); color: #000; }
         .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
         .metric-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
         .metric-value { font-size: 20px; font-weight: bold; font-variant-numeric: tabular-nums; }
         .progress-bar { height: 6px; background: #000; border-radius: 3px; overflow: hidden; margin-top: 8px; display: flex; }
         .progress-fill { height: 100%; background: var(--accent); transition: width 0.5s ease-out; }
+        .chart-scroll-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 8px; }
+        .chart-container-inner { min-width: 800px; height: 320px; }
+        .scroll-hint { font-size: 11px; color: var(--text-muted); text-align: right; margin-bottom: 8px; font-style: italic; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="badge-bar">
-        <span class="version-tag">📦 BUILD: v1.4.0</span>
+        <span class="version-tag">📦 BUILD: v2.0.1</span>
         <span class="ai-status-badge">✨ Cloudflare D1 Server-Driven</span>
     </div>
 
@@ -87,6 +89,19 @@
     </div>
 
     <div class="grid" id="region-cards"></div>
+
+    <!-- Restored Charts Section -->
+    <div class="card">
+        <div class="region-header"><h2 class="region-name">24-Hour Regional Share Proportions (Stacked Percentage View)</h2></div>
+        <div class="scroll-hint">💡 Swipe horizontally to view all 24 hours</div>
+        <div class="chart-scroll-wrapper"><div class="chart-container-inner"><canvas id="proportionChart"></canvas></div></div>
+    </div>
+
+    <div class="card" style="margin-top: 24px;">
+        <div class="region-header"><h2 class="region-name">24-Hour Future Forecast (Current Time → +23h Future)</h2></div>
+        <div class="scroll-hint">💡 Swipe horizontally to view all 24 hours</div>
+        <div class="chart-scroll-wrapper"><div class="chart-container-inner"><canvas id="trafficChart"></canvas></div></div>
+    </div>
 </div>
 
 <script>
@@ -95,6 +110,8 @@
     let globalSteamPlayers = 29500;
     let serverWeights = {};
     let isCrossPlay = false;
+    let proportionChartInstance = null;
+    let trafficChartInstance = null;
 
     const BASE_REGIONS = [
         { id: "hongkong", name: "Hong Kong (Local)", ping: 2, tz: "Asia/Hong_Kong", color: "#38bdf8", baseShare: 0.18 },
@@ -124,6 +141,7 @@
             console.warn("Using offline fallback mode");
         }
         renderDashboard();
+        renderCharts();
     }
 
     function renderDashboard() {
@@ -163,6 +181,51 @@
                     </div>
                 </div>
             `;
+        });
+    }
+
+    function renderCharts() {
+        const currentHour = new Date().getHours();
+        const labels = [];
+        for (let i = 0; i < 24; i++) {
+            let h = (currentHour + i) % 24;
+            labels.push(`${String(h).padStart(2, '0')}:00`);
+        }
+
+        // 1. Proportion Chart
+        const propDatasets = BASE_REGIONS.map(region => {
+            const data = labels.map(() => region.baseShare * 100);
+            return { label: region.name, data, backgroundColor: region.color, borderWidth: 0 };
+        });
+
+        if (proportionChartInstance) proportionChartInstance.destroy();
+        const ctxProp = document.getElementById('proportionChart').getContext('2d');
+        proportionChartInstance = new Chart(ctxProp, {
+            type: 'bar',
+            data: { labels, datasets: propDatasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { stacked: true },
+                    y: { stacked: true, max: 100, ticks: { callback: (val) => val + '%' } }
+                }
+            }
+        });
+
+        // 2. Traffic Forecast Chart
+        const trafficDatasets = BASE_REGIONS.map(region => {
+            const weight = serverWeights[region.id] || 1.0;
+            const data = labels.map(() => Math.round(globalSteamPlayers * region.baseShare * weight * (isCrossPlay ? 2.5 : 1.0)));
+            return { label: region.name, data, borderColor: region.color, backgroundColor: region.color + '20', borderWidth: 2, tension: 0.4, fill: true };
+        });
+
+        if (trafficChartInstance) trafficChartInstance.destroy();
+        const ctxTraffic = document.getElementById('trafficChart').getContext('2d');
+        trafficChartInstance = new Chart(ctxTraffic, {
+            type: 'line',
+            data: { labels, datasets: trafficDatasets },
+            options: { responsive: true, maintainAspectRatio: false }
         });
     }
 
